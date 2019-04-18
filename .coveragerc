@@ -1,0 +1,7 @@
+[run]
+omit =
+    */site-packages/*
+    */distutils/*
+    tests/*
+    venv/*
+    lib/exceptions.py

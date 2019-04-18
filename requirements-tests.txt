@@ -1,0 +1,4 @@
+moto
+python-box==3.4.0
+flake8==3.7.7
+nose2==0.9.1
