@@ -335,7 +335,7 @@ def update_asgs(asgs):
         # get number of k8s nodes before we scale used later
         # to determine how many new nodes have been created
         k8s_nodes = get_k8s_nodes()
-        #scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity)
+        scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity)
         logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(cluster_health_grace, asg_name))
         time.sleep(cluster_health_grace)
         # check cluster health before doing anything
