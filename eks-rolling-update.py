@@ -7,6 +7,7 @@ import time
 import shutil
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+from config import app_config
 
 # Configs can be set in Configuration class directly or using helper utility
 config.load_kube_config()
@@ -61,8 +62,6 @@ def modify_k8s_autoscaler(action):
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
     k8s_api = kubernetes.client.AppsV1Api(kubernetes.client.ApiClient(configuration))
-    namespace = 'kube-system'
-    deployment_name = 'cluster-autoscaler-aws-cluster-autoscaler'
     if action == 'pause':
         logging.info('Pausing k8s autoscaler...')
         body = {'spec': {'replicas': 0}}
@@ -74,8 +73,8 @@ def modify_k8s_autoscaler(action):
         quit()
     try:
         k8s_api.patch_namespaced_deployment(
-            deployment_name,
-            namespace,
+            app_config['AUTOSCALER_DEPLOYMENT'],
+            app_config['AUTOSCALER_NAMESPACE'],
             body
         )
         logging.info('K8s autoscaler modified to replicas: {}'.format(body['spec']['replicas']))
@@ -91,13 +90,19 @@ def drain_node(node_name):
     replicate the same functionality here would be too time consuming
     """
     logging.info('Draining worker node {}...'.format(node_name))
-    result = subprocess.run([
-        'kubectl', 'drain', node_name,
-        '--ignore-daemonsets',
-        '--delete-local-data',
-        '--force',
-        '--dry-run']
-    )
+    if app_config['DRY_RUN']:
+        result = subprocess.run([
+            'kubectl', 'drain', node_name,
+            '--ignore-daemonsets',
+            '--delete-local-data',
+            '--dry-run']
+        )
+    else:
+        result = subprocess.run([
+            'kubectl', 'drain', node_name,
+            '--ignore-daemonsets',
+            '--delete-local-data']
+        )
     # If returncode is non-zero, raise a CalledProcessError.
     result.check_returncode
 
@@ -108,7 +113,7 @@ def terminate_instance(instance_id):
     try:
         response = client.stop_instances(
             InstanceIds=[instance_id],
-            DryRun=True
+            DryRun=app_config['DRY_RUN']
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
             logging.info('Termination of instance succeeded.')
@@ -121,7 +126,7 @@ def terminate_instance(instance_id):
             raise
 
 
-def is_asg_healthy(asg_name, max_retry=5, wait=60):
+def is_asg_healthy(asg_name, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     asg_healthy = True
     retry_count = 1
     client = boto3.client('autoscaling')
@@ -154,9 +159,8 @@ def is_asg_scaled(asg_name, desired_capacity):
     response = client.describe_auto_scaling_groups(
         AutoScalingGroupNames=[asg_name], MaxRecords=1
     )
-    actual_capacity = response['AutoScalingGroups'][0]['DesiredCapacity']
     actual_instances = response['AutoScalingGroups'][0]['Instances']
-    if actual_capacity and len(actual_instances) != desired_capacity:
+    if len(actual_instances) != desired_capacity:
         logging.info('Asg {} does not have enough running instances to proceed'.format(asg_name))
         logging.info('Actual instances: {} Desired instances: {}'.format(
             len(actual_instances),
@@ -182,20 +186,25 @@ def modify_aws_autoscaling(asg_name, action):
         asg_name,
         action)
     )
-    if action == "suspend":
-        response = client.suspend_processes(
-            AutoScalingGroupName=asg_name,
-            ScalingProcesses=['Launch', 'ReplaceUnhealthy', 'AddToLoadBalancer'])
-    elif action == "resume":
-        response = client.resume_processes(
-            AutoScalingGroupName=asg_name,
-            ScalingProcesses=['Launch', 'ReplaceUnhealthy', 'AddToLoadBalancer'])
-    else:
-        logging.info('Invalid scaling option')
+    if not app_config['DRY_RUN']:
 
-    if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
-        logging.info('AWS asg modification operation did not succeed. Exiting.')
-        raise Exception('AWS asg modification operation did not succeed. Exiting.')
+        if action == "suspend":
+            response = client.suspend_processes(
+                AutoScalingGroupName=asg_name,
+                ScalingProcesses=['Launch', 'ReplaceUnhealthy'])
+        elif action == "resume":
+            response = client.resume_processes(
+                AutoScalingGroupName=asg_name,
+                ScalingProcesses=['Launch', 'ReplaceUnhealthy'])
+        else:
+            logging.info('Invalid scaling option')
+
+        if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
+            logging.info('AWS asg modification operation did not succeed. Exiting.')
+            raise Exception('AWS asg modification operation did not succeed. Exiting.')
+    else:
+        logging.info('Skipping asg modification due to dry run flag set')
+        response = {'message': 'dry run only'}
 
     return response
 
@@ -209,12 +218,16 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity):
         new_desired_capacity)
     )
     client = boto3.client('autoscaling')
-    response = client.update_auto_scaling_group(
-        AutoScalingGroupName=asg_name,
-        DesiredCapacity=new_desired_capacity)
-    if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
-        logging.info('AWS scale up operation did not succeed. Exiting.')
-        raise Exception('AWS scale up operation did not succeed. Exiting.')
+    if not app_config['DRY_RUN']:
+        response = client.update_auto_scaling_group(
+            AutoScalingGroupName=asg_name,
+            DesiredCapacity=new_desired_capacity)
+        if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
+            logging.info('AWS scale up operation did not succeed. Exiting.')
+            raise Exception('AWS scale up operation did not succeed. Exiting.')
+    else:
+        logging.info('Skipping asg scaling due to dry run flag set')
+        response = {'message': 'dry run only'}
 
 
 def instance_outdated(instance_obj, asg_lc_name):
@@ -233,7 +246,7 @@ def instance_outdated(instance_obj, asg_lc_name):
         return False
 
 
-def k8s_nodes_ready(max_retry=5, wait=60):
+def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     logging.info('Checking k8s nodes health status...')
     healthy_nodes = True
     retry_count = 1
@@ -260,7 +273,7 @@ def k8s_nodes_ready(max_retry=5, wait=60):
 
 
 def k8s_nodes_count(current_node_count, desired_node_count,
-                    max_retry=5, wait=60):
+                    max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     logging.info('Checking k8s expected nodes are online after asg scaled up...')
     nodes_online = False
     retry_count = 1
@@ -315,8 +328,6 @@ def validate_cluster_health(
 
 
 def update_asgs(asgs):
-    cluster_health_grace = 60
-    drain_wait = 60
     for asg in asgs:
         logging.info('*** Starting rolling update for autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
@@ -336,8 +347,8 @@ def update_asgs(asgs):
         # to determine how many new nodes have been created
         k8s_nodes = get_k8s_nodes()
         scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity)
-        logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(cluster_health_grace, asg_name))
-        time.sleep(cluster_health_grace)
+        logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
+        time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
         # check cluster health before doing anything
         if validate_cluster_health(
             asg_name,
@@ -354,7 +365,7 @@ def update_asgs(asgs):
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 drain_node(node_name)
                 logging.info('Waiting extra time after node is drained...')
-                time.sleep(drain_wait)
+                time.sleep(app_config['DRAIN_WAIT'])
                 terminate_instance(outdated['InstanceId'])
             # scaling cluster back down
             logging.info("Scaling asg back down to original state")
