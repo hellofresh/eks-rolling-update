@@ -23,6 +23,7 @@ logging.basicConfig(
 def get_k8s_nodes():
     logging.info("Getting k8s nodes...")
     response = k8s_api.list_node()
+    logging.info("Current k8s node count is {}".format(len(response.items)))
     return response.items
 
 
@@ -95,13 +96,15 @@ def drain_node(node_name):
             'kubectl', 'drain', node_name,
             '--ignore-daemonsets',
             '--delete-local-data',
-            '--dry-run']
+            '--dry-run'
+            ]
         )
     else:
         result = subprocess.run([
             'kubectl', 'drain', node_name,
             '--ignore-daemonsets',
-            '--delete-local-data']
+            '--delete-local-data'
+            ]
         )
     # If returncode is non-zero, raise a CalledProcessError.
     result.check_returncode
@@ -127,10 +130,10 @@ def terminate_instance(instance_id):
 
 
 def is_asg_healthy(asg_name, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
-    asg_healthy = True
     retry_count = 1
     client = boto3.client('autoscaling')
     while retry_count < max_retry:
+        asg_healthy = True
         retry_count += 1
         logging.info('Checking asg {} instance health...'.format(asg_name))
         response = client.describe_auto_scaling_groups(
@@ -209,7 +212,7 @@ def modify_aws_autoscaling(asg_name, action):
     return response
 
 
-def scale_asg(asg_name, current_desired_capacity, new_desired_capacity):
+def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_size):
     """
     Changes the desired capacity of an asg
     """
@@ -221,7 +224,8 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity):
     if not app_config['DRY_RUN']:
         response = client.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
-            DesiredCapacity=new_desired_capacity)
+            DesiredCapacity=new_desired_capacity,
+            MaxSize=new_max_size)
         if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
             logging.info('AWS scale up operation did not succeed. Exiting.')
             raise Exception('AWS scale up operation did not succeed. Exiting.')
@@ -246,11 +250,32 @@ def instance_outdated(instance_obj, asg_lc_name):
         return False
 
 
-def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
-    logging.info('Checking k8s nodes health status...')
-    healthy_nodes = True
+def instance_terminated(instance_id, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+    client = boto3.client('ec2')
     retry_count = 1
     while retry_count < max_retry:
+        is_instance_terminated = True
+        logging.info('Checking instance {} is terminated...'.format(instance_id))
+        retry_count += 1
+        response = client.describe_instance_status(
+            InstanceIds=[instance_id]
+        )
+        state = response['InstanceStatuses'][0]['InstanceState']
+        if state['Name'] != 'terminated':
+            is_instance_terminated = False
+            logging.info('Instance {} is still running, checking again...'.format(instance_id))
+        else:
+            is_instance_terminated = True
+            break
+    return is_instance_terminated
+
+
+def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+    logging.info('Checking k8s nodes health status...')
+    retry_count = 1
+    while retry_count < max_retry:
+        # reset healthy nodes after every loop
+        healthy_nodes = True
         retry_count += 1
         nodes = get_k8s_nodes()
         for node in nodes:
@@ -275,22 +300,19 @@ def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
 def k8s_nodes_count(current_node_count, desired_node_count,
                     max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     logging.info('Checking k8s expected nodes are online after asg scaled up...')
-    nodes_online = False
     retry_count = 1
     while retry_count < max_retry:
+        nodes_online = True
         retry_count += 1
         nodes = get_k8s_nodes()
         logging.info('Current k8s node count is {}'.format(current_node_count))
-        if len(nodes) == desired_node_count:
-            nodes_online = True
-            logging.info('Reached desired k8s node count of {}'.format(
-                len(nodes))
-            )
+        if len(nodes) != desired_node_count:
+            nodes_online = False
+            logging.info('Waiting for k8s nodes to reach count {}...'.format(desired_node_count))
+            time.sleep(wait)
+        else:
+            logging.info('Reached desired k8s node count of {}'.format(len(nodes)))
             break
-        logging.info('Waiting for k8s nodes to reach count {}...'.format(
-            desired_node_count)
-        )
-        time.sleep(wait)
     return nodes_online
 
 
@@ -332,6 +354,7 @@ def update_asgs(asgs):
         logging.info('*** Starting rolling update for autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
         asg_lc_name = asg['LaunchConfigurationName']
+        old_asg_max_size = asg['MaxSize']
         instances = asg['Instances']
         old_asg_desired_capacity = asg['DesiredCapacity']
         # return a list of outdated instances
@@ -343,10 +366,13 @@ def update_asgs(asgs):
         logging.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )
+        # skip to next asg if there are no outdated instances
+        if len(outdated_instances) == 0:
+            continue
         # get number of k8s nodes before we scale used later
         # to determine how many new nodes have been created
         k8s_nodes = get_k8s_nodes()
-        scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity)
+        scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity, new_desired_asg_capacity)
         logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
         time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
         # check cluster health before doing anything
@@ -367,9 +393,11 @@ def update_asgs(asgs):
                 logging.info('Waiting extra time after node is drained...')
                 time.sleep(app_config['DRAIN_WAIT'])
                 terminate_instance(outdated['InstanceId'])
+                if not instance_terminated(outdated['InstanceId']):
+                    raise Exception('Instance is failing to terminate. Cancelling out.')
             # scaling cluster back down
             logging.info("Scaling asg back down to original state")
-            scale_asg(asg_name, new_desired_asg_capacity, old_asg_desired_capacity)
+            scale_asg(asg_name, new_desired_asg_capacity, old_asg_desired_capacity, old_asg_max_size)
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
         else:
