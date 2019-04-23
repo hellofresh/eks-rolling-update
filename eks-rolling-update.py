@@ -348,6 +348,25 @@ def validate_cluster_health(
             'Not enough instances online'.format(asg_name))
     return cluster_healthy
 
+def plan_asgs(asgs):
+    """
+    Checks to see which asgs are out of date
+    """
+    for asg in asgs:
+        logging.info('*** Checking autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
+        asg_name = asg['AutoScalingGroupName']
+        asg_lc_name = asg['LaunchConfigurationName']
+        old_asg_max_size = asg['MaxSize']
+        instances = asg['Instances']
+        old_asg_desired_capacity = asg['DesiredCapacity']
+        # return a list of outdated instances
+        outdated_instances = []
+        for instance in instances:
+            if instance_outdated(instance, asg_lc_name):
+                outdated_instances.append(instance)
+        logging.info('Found {} outdated instances'.format(
+            len(outdated_instances))
+        )
 
 def update_asgs(asgs):
     for asg in asgs:
@@ -410,24 +429,31 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Rolling update on cluster')
     parser.add_argument('--cluster_name', '-c', required=True,
                         help='the cluster name to perform rolling update on')
+    parser.add_argument('--plan', '-p', nargs='?', const=True,
+                        help='perform a dry run to see which instances are out of date')
     args = parser.parse_args()
     # check kubectl is installed
     kctl = shutil.which('kubectl')
     if not kctl:
         logging.info('kubectl is required to be installed before proceeding')
         quit()
-    # pause k8s autoscaler
-    modify_k8s_autoscaler("pause")
     filtered_asgs = get_asgs(args.cluster_name)
-    try:
-        update_asgs(filtered_asgs)
-        # resume autoscaler no matter what happens
-        modify_k8s_autoscaler("resume")
-        logging.info('*** Rolling update of asg is complete! ***')
-    except Exception as e:
-        logging.info(e)
-        logging.info('*** Rolling update of asg has failed. Exiting ***')
-        # resume autoscaler no matter what happens
-        modify_k8s_autoscaler("resume")
-        quit()
+    # perform a dry run
+    if args.plan:
+        plan_asgs(filtered_asgs)
+    else:
+        # perform real update
+        # pause k8s autoscaler
+        modify_k8s_autoscaler("pause")
+        try:
+            update_asgs(filtered_asgs)
+            # resume autoscaler no matter what happens
+            modify_k8s_autoscaler("resume")
+            logging.info('*** Rolling update of asg is complete! ***')
+        except Exception as e:
+            logging.info(e)
+            logging.info('*** Rolling update of asg has failed. Exiting ***')
+            # resume autoscaler no matter what happens
+            modify_k8s_autoscaler("resume")
+            quit()
 
