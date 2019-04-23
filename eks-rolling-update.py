@@ -114,7 +114,7 @@ def drain_node(node_name):
         )
     # If returncode is non-zero, raise a CalledProcessError.
     if result.returncode != 0:
-        Exception("Node not drained properly. Exiting")
+        raise Exception("Node not drained properly. Exiting")
 
 
 def terminate_instance(instance_id):
@@ -227,6 +227,8 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_
         current_desired_capacity,
         new_desired_capacity)
     )
+    logging.info('Setting asg max size to {}...'.format(new_max_size)
+    )
     client = boto3.client('autoscaling')
     if not app_config['DRY_RUN']:
         response = client.update_auto_scaling_group(
@@ -238,6 +240,50 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_
             raise Exception('AWS scale up operation did not succeed. Exiting.')
     else:
         logging.info('Skipping asg scaling due to dry run flag set')
+        response = {'message': 'dry run only'}
+
+
+def save_asg_tags(asg_name, key, value):
+    """
+    Adds a tag to asg for later retrieval
+    """
+    logging.info('Saving tag to asg {}:{}...'.format(key, value))
+    client = boto3.client('autoscaling')
+    if not app_config['DRY_RUN']:
+        response = client.create_or_update_tags(
+            Tags=[
+                {
+                    'Key': key,
+                    'Value': value
+                },
+            ]
+        )
+        if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
+            logging.info('AWS asg tag modification operation did not succeed. Exiting.')
+            raise Exception('AWS asg tag modification operation did not succeed. Exiting.')
+    else:
+        logging.info('Skipping asg tag modification due to dry run flag set')
+        response = {'message': 'dry run only'}
+
+def delete_asg_tags(asg_name, key):
+    """
+    Deletes a tag from asg
+    """
+    logging.info('Deleting tag from asg key: {}...'.format(key))
+    client = boto3.client('autoscaling')
+    if not app_config['DRY_RUN']:
+        response = client.delete_tags(
+            Tags=[
+                {
+                    'Key': key
+                },
+            ]
+        )
+        if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
+            logging.info('AWS asg tag modification operation did not succeed. Exiting.')
+            raise Exception('AWS asg tag modification operation did not succeed. Exiting.')
+    else:
+        logging.info('Skipping asg tag modification due to dry run flag set')
         response = {'message': 'dry run only'}
 
 
@@ -359,6 +405,17 @@ def validate_cluster_health(
             'Not enough instances online'.format(asg_name))
     return cluster_healthy
 
+def get_asg_tag(tags, tag_name):
+    """
+    Returns a tag on a list of asg tags
+    """
+    result = {}
+    for tag in tags:
+        for key,val in tag.items():
+            if key == tag_name:
+                result = tag
+    return result
+
 def plan_asgs(asgs):
     """
     Checks to see which asgs are out of date
@@ -384,15 +441,15 @@ def update_asgs(asgs):
         logging.info('*** Starting rolling update for autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
         asg_lc_name = asg['LaunchConfigurationName']
-        old_asg_max_size = asg['MaxSize']
+        asg_old_max_size = asg['MaxSize']
         instances = asg['Instances']
-        old_asg_desired_capacity = asg['DesiredCapacity']
+        asg_old_desired_capacity = asg['DesiredCapacity']
+        asg_tags = asg['Tags']
         # return a list of outdated instances
         outdated_instances = []
         for instance in instances:
             if instance_outdated(instance, asg_lc_name):
                 outdated_instances.append(instance)
-        new_desired_asg_capacity = old_asg_desired_capacity + len(outdated_instances)
         logging.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )
@@ -404,14 +461,29 @@ def update_asgs(asgs):
         k8s_nodes = get_k8s_nodes()
         # remove any stale suspentions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
+        # check for tag on asg
+        asg_tag_old_capacity = get_asg_tag(asg_tags, "eks-rolling-update:old_desired_capacity")
+        if asg_tag_old_capacity.get('Value'):
+            logging.info('Found previous capacity value set on asg. Value: {}'.format(asg_tag_old_capacity.get('Value')))
+            asg_new_desired_capacity = asg_tag_old_capacity.get('Value')
+        else:
+            asg_new_desired_capacity = asg_old_desired_capacity + len(outdated_instances)
+            # save new capacity to asg tags
+            save_asg_tags(asg_name, "eks-rolling-update:desired_capacity", asg_new_desired_capacity)
+        # only change the max size if the new capacity is bigger than current max
+        if asg_new_desired_capacity > asg_old_max_size:
+            asg_new_max_size = asg_new_desired_capacity
+        else:
+            # dont change the size
+            asg_new_max_size = asg_old_max_size
         # now scale up
-        scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity, new_desired_asg_capacity)
+        scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
         logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
         time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
         # check cluster health before doing anything
         if validate_cluster_health(
             asg_name,
-            new_desired_asg_capacity,
+            asg_new_desired_capacity,
             len(k8s_nodes) + len(outdated_instances)
         ):
             # pause aws autoscaling so new instances dont try
@@ -429,9 +501,11 @@ def update_asgs(asgs):
                     raise Exception('Instance is failing to terminate. Cancelling out.')
             # scaling cluster back down
             logging.info("Scaling asg back down to original state")
-            scale_asg(asg_name, new_desired_asg_capacity, old_asg_desired_capacity, old_asg_max_size)
+            scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
+            # remove aws tag
+            delete_asg_tags(asg_name, "eks-rolling-update:desired_capacity")
         else:
             logging.info('Exiting since asg healthcheck failed')
             raise Exception('Asg healthcheck failed')
