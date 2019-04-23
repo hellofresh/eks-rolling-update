@@ -307,7 +307,7 @@ def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     return healthy_nodes
 
 
-def k8s_nodes_count(current_node_count, desired_node_count,
+def k8s_nodes_count(desired_node_count,
                     max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     logging.info('Checking k8s expected nodes are online after asg scaled up...')
     retry_count = 1
@@ -315,7 +315,7 @@ def k8s_nodes_count(current_node_count, desired_node_count,
         nodes_online = True
         retry_count += 1
         nodes = get_k8s_nodes()
-        logging.info('Current k8s node count is {}'.format(current_node_count))
+        logging.info('Current k8s node count is {}'.format(len(nodes)))
         if len(nodes) != desired_node_count:
             nodes_online = False
             logging.info('Waiting for k8s nodes to reach count {}...'.format(desired_node_count))
@@ -329,7 +329,6 @@ def k8s_nodes_count(current_node_count, desired_node_count,
 def validate_cluster_health(
         asg_name,
         new_desired_asg_capacity,
-        current_k8s_node_count,
         desired_k8s_node_count):
     cluster_healthy = False
     # check if asg has enough nodes first before checking instance health
@@ -337,7 +336,7 @@ def validate_cluster_health(
         # if asg is healthy start draining and terminating instances
         if is_asg_healthy(asg_name):
             # check if k8s nodes are all online
-            if k8s_nodes_count(current_k8s_node_count, desired_k8s_node_count):
+            if k8s_nodes_count(desired_k8s_node_count):
                 # check k8s nodes are healthy
                 if k8s_nodes_ready():
                     logging.info('Cluster validation passed. Proceeding with node draining and termination...')
@@ -345,8 +344,10 @@ def validate_cluster_health(
                 else:
                     logging.info('Validation failed for cluster. Expected node count reached but nodes are not healthy.')
             else:
+                nodes = get_k8s_nodes()
+                logging.info('Current k8s node count is {}'.format(len(nodes)))
                 logging.info('Validation failed for cluster. Current node count {} Expected node count {}.'.format(
-                    current_k8s_node_count,
+                    len(nodes),
                     desired_k8s_node_count))
         else:
             logging.info(
@@ -411,7 +412,6 @@ def update_asgs(asgs):
         if validate_cluster_health(
             asg_name,
             new_desired_asg_capacity,
-            len(k8s_nodes),
             len(k8s_nodes) + len(outdated_instances)
         ):
             # pause aws autoscaling so new instances dont try
