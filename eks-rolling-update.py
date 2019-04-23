@@ -19,6 +19,11 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+class RollingUpdateException(Exception):
+    def __init__(self, msg, asg):
+        self.msg = msg
+        self.asg = asg
+
 
 def get_k8s_nodes():
     logging.info("Getting k8s nodes...")
@@ -257,16 +262,18 @@ def instance_terminated(instance_id, max_retry=app_config['MAX_RETRY'], wait=app
         is_instance_terminated = True
         logging.info('Checking instance {} is terminated...'.format(instance_id))
         retry_count += 1
-        response = client.describe_instance_status(
+        response = client.describe_instances(
             InstanceIds=[instance_id]
         )
-        state = response['InstanceStatuses'][0]['InstanceState']
-        if state['Name'] != 'terminated':
+        state = response['Reservations'][0]['Instances'][0]['State']
+        stop_states = ['terminated', 'stopped']
+        if state['Name'] not in stop_states:
             is_instance_terminated = False
             logging.info('Instance {} is still running, checking again...'.format(instance_id))
         else:
             is_instance_terminated = True
             break
+        time.sleep(wait)
     return is_instance_terminated
 
 
@@ -293,6 +300,7 @@ def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
         if healthy_nodes:
             logging.info('All k8s nodes are healthy')
             break
+        logging.info('Retrying node health...')
         time.sleep(wait)
     return healthy_nodes
 
@@ -447,7 +455,7 @@ if __name__ == "__main__":
         modify_k8s_autoscaler("pause")
         try:
             update_asgs(filtered_asgs)
-            # resume autoscaler no matter what happens
+            # resume autoscaler after asg updated
             modify_k8s_autoscaler("resume")
             logging.info('*** Rolling update of asg is complete! ***')
         except Exception as e:
