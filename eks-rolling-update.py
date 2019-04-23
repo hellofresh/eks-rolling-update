@@ -9,9 +9,6 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from config import app_config
 
-# Configs can be set in Configuration class directly or using helper utility
-config.load_kube_config()
-k8s_api = client.CoreV1Api()
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -26,6 +23,8 @@ class RollingUpdateException(Exception):
 
 
 def get_k8s_nodes():
+    config.load_kube_config()
+    k8s_api = client.CoreV1Api()
     logging.info("Getting k8s nodes...")
     response = k8s_api.list_node()
     logging.info("Current k8s node count is {}".format(len(response.items)))
@@ -64,6 +63,8 @@ def get_asgs(cluster_tag):
 
 def modify_k8s_autoscaler(action):
     import kubernetes.client
+    config.load_kube_config()
+    k8s_api = client.CoreV1Api()
     # Configure API key authorization: BearerToken
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
@@ -112,7 +113,8 @@ def drain_node(node_name):
             ]
         )
     # If returncode is non-zero, raise a CalledProcessError.
-    result.check_returncode
+    if result.returncode != 0:
+        Exception("Node not drained properly. Exiting")
 
 
 def terminate_instance(instance_id):
@@ -399,6 +401,9 @@ def update_asgs(asgs):
         # get number of k8s nodes before we scale used later
         # to determine how many new nodes have been created
         k8s_nodes = get_k8s_nodes()
+        # remove any stale suspentions from asg that may be present
+        modify_aws_autoscaling(asg_name, "resume")
+        # now scale up
         scale_asg(asg_name, old_asg_desired_capacity, new_desired_asg_capacity, new_desired_asg_capacity)
         logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
         time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
@@ -417,7 +422,7 @@ def update_asgs(asgs):
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 drain_node(node_name)
-                logging.info('Waiting extra time after node is drained...')
+                logging.info('Waiting {}s for node to drain...'.format(app_config['DRAIN_WAIT']))
                 time.sleep(app_config['DRAIN_WAIT'])
                 terminate_instance(outdated['InstanceId'])
                 if not instance_terminated(outdated['InstanceId']):
