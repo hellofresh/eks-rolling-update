@@ -247,14 +247,14 @@ def save_asg_tags(asg_name, key, value):
     """
     Adds a tag to asg for later retrieval
     """
-    logging.info('Saving tag to asg {}:{}...'.format(key, value))
+    logging.info('Saving tag to asg key: {}, value : {}...'.format(key, value))
     client = boto3.client('autoscaling')
     if not app_config['DRY_RUN']:
         response = client.create_or_update_tags(
             Tags=[
                 {
                     'Key': key,
-                    'Value': value
+                    'Value': str(value)
                 },
             ]
         )
@@ -412,7 +412,7 @@ def get_asg_tag(tags, tag_name):
     result = {}
     for tag in tags:
         for key,val in tag.items():
-            if key == tag_name:
+            if val == tag_name:
                 result = tag
     return result
 
@@ -462,14 +462,16 @@ def update_asgs(asgs):
         # remove any stale suspentions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
         # check for tag on asg
-        asg_tag_old_capacity = get_asg_tag(asg_tags, "eks-rolling-update:old_desired_capacity")
+        asg_tag_old_capacity = get_asg_tag(asg_tags, app_config["ASG_STATE_TAG"])
         if asg_tag_old_capacity.get('Value'):
-            logging.info('Found previous capacity value set on asg. Value: {}'.format(asg_tag_old_capacity.get('Value')))
-            asg_new_desired_capacity = asg_tag_old_capacity.get('Value')
+            logging.info('Found previous capacity value tag set on asg. Value: {}'.format(asg_tag_old_capacity.get('Value')))
+            logging.info('Maintaining previous capacity to not overscale')
+            asg_new_desired_capacity = int(asg_tag_old_capacity.get('Value'))
         else:
+            logging.info('No previous capacity value tag set on asg')
             asg_new_desired_capacity = asg_old_desired_capacity + len(outdated_instances)
             # save new capacity to asg tags
-            save_asg_tags(asg_name, "eks-rolling-update:desired_capacity", asg_new_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_STATE_TAG"], asg_new_desired_capacity)
         # only change the max size if the new capacity is bigger than current max
         if asg_new_desired_capacity > asg_old_max_size:
             asg_new_max_size = asg_new_desired_capacity
@@ -505,7 +507,7 @@ def update_asgs(asgs):
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag
-            delete_asg_tags(asg_name, "eks-rolling-update:desired_capacity")
+            delete_asg_tags(asg_name, app_config["ASG_STATE_TAG"])
         else:
             logging.info('Exiting since asg healthcheck failed')
             raise Exception('Asg healthcheck failed')
