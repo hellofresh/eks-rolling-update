@@ -16,6 +16,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+
 class RollingUpdateException(Exception):
     def __init__(self, msg, asg):
         self.msg = msg
@@ -223,11 +224,11 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_
     """
     Changes the desired capacity of an asg
     """
-    logging.info('Scaling asg desired capacity from {} to {}...'.format(
+    logging.info('Setting asg desired capacity from {} to {} and max size to {}...'.format(
         current_desired_capacity,
-        new_desired_capacity)
-    )
-    logging.info('Setting asg max size to {}...'.format(new_max_size)
+        new_desired_capacity,
+        new_max_size
+        )
     )
     client = boto3.client('autoscaling')
     if not app_config['DRY_RUN']:
@@ -254,7 +255,10 @@ def save_asg_tags(asg_name, key, value):
             Tags=[
                 {
                     'Key': key,
-                    'Value': str(value)
+                    'Value': str(value),
+                    'ResourceId': asg_name,
+                    'ResourceType': 'auto-scaling-group',
+                    'PropagateAtLaunch': False
                 },
             ]
         )
@@ -275,7 +279,9 @@ def delete_asg_tags(asg_name, key):
         response = client.delete_tags(
             Tags=[
                 {
-                    'Key': key
+                    'Key': key,
+                    'ResourceId': asg_name,
+                    'ResourceType': 'auto-scaling-group'
                 },
             ]
         )
@@ -319,6 +325,7 @@ def instance_terminated(instance_id, max_retry=app_config['MAX_RETRY'], wait=app
             is_instance_terminated = False
             logging.info('Instance {} is still running, checking again...'.format(instance_id))
         else:
+            logging.info('Instance {} terminiated!'.format(instance_id))
             is_instance_terminated = True
             break
         time.sleep(wait)
@@ -411,7 +418,7 @@ def get_asg_tag(tags, tag_name):
     """
     result = {}
     for tag in tags:
-        for key,val in tag.items():
+        for key, val in tag.items():
             if val == tag_name:
                 result = tag
     return result
@@ -422,11 +429,8 @@ def plan_asgs(asgs):
     """
     for asg in asgs:
         logging.info('*** Checking autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
-        asg_name = asg['AutoScalingGroupName']
         asg_lc_name = asg['LaunchConfigurationName']
-        old_asg_max_size = asg['MaxSize']
         instances = asg['Instances']
-        old_asg_desired_capacity = asg['DesiredCapacity']
         # return a list of outdated instances
         outdated_instances = []
         for instance in instances:
@@ -436,9 +440,20 @@ def plan_asgs(asgs):
             len(outdated_instances))
         )
 
-def update_asgs(asgs):
+
+def count_all_cluster_instances(cluster_name):
+    count = 0
+    asgs = get_asgs(cluster_name)
     for asg in asgs:
-        logging.info('*** Starting rolling update for autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
+        count += len(asg['Instances'])
+    logging.info("Current asg instance count in cluster is: {}. K8s node count should match this number".format(count))
+    return count
+
+
+def update_asgs(asgs, cluster_name):
+    for asg in asgs:
+        logging.info('\n')
+        logging.info('****  Starting rolling update for autoscaling group {}  ****'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
         asg_lc_name = asg['LaunchConfigurationName']
         asg_old_max_size = asg['MaxSize']
@@ -456,9 +471,6 @@ def update_asgs(asgs):
         # skip to next asg if there are no outdated instances
         if len(outdated_instances) == 0:
             continue
-        # get number of k8s nodes before we scale used later
-        # to determine how many new nodes have been created
-        k8s_nodes = get_k8s_nodes()
         # remove any stale suspentions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
         # check for tag on asg
@@ -478,15 +490,20 @@ def update_asgs(asgs):
         else:
             # dont change the size
             asg_new_max_size = asg_old_max_size
+        # get number of k8s nodes before we scale used later
+        # to determine how many new nodes have been created
+        k8s_nodes = get_k8s_nodes()
         # now scale up
         scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
         logging.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
         time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
+        # check how many instances are running
+        asg_instance_count = count_all_cluster_instances(cluster_name)
         # check cluster health before doing anything
         if validate_cluster_health(
             asg_name,
             asg_new_desired_capacity,
-            len(k8s_nodes) + len(outdated_instances)
+            asg_instance_count
         ):
             # pause aws autoscaling so new instances dont try
             # to spawn while instances are being terminated
@@ -508,6 +525,7 @@ def update_asgs(asgs):
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag
             delete_asg_tags(asg_name, app_config["ASG_STATE_TAG"])
+            logging.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
         else:
             logging.info('Exiting since asg healthcheck failed')
             raise Exception('Asg healthcheck failed')
@@ -535,10 +553,10 @@ if __name__ == "__main__":
         # pause k8s autoscaler
         modify_k8s_autoscaler("pause")
         try:
-            update_asgs(filtered_asgs)
+            update_asgs(filtered_asgs, args.cluster_name)
             # resume autoscaler after asg updated
             modify_k8s_autoscaler("resume")
-            logging.info('*** Rolling update of asg is complete! ***')
+            logging.info('*** Rolling update of all asg is complete! ***')
         except Exception as e:
             logging.info(e)
             logging.info('*** Rolling update of asg has failed. Exiting ***')

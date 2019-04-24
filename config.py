@@ -1,5 +1,5 @@
 app_config = {
-    'CLUSTER_HEALTH_WAIT': 60,
+    'CLUSTER_HEALTH_WAIT': 90,
     'DRAIN_WAIT': 60,
     'AUTOSCALER_NAMESPACE': 'kube-system',
     'AUTOSCALER_DEPLOYMENT': 'cluster-autoscaler-aws-cluster-autoscaler',
