@@ -18,9 +18,9 @@ logging.basicConfig(
 
 
 class RollingUpdateException(Exception):
-    def __init__(self, msg, asg):
-        self.msg = msg
-        self.asg = asg
+    def __init__(self, message, asg_name):
+        self.message = message
+        self.asg_name = asg_name
 
 
 def get_k8s_nodes():
@@ -90,6 +90,27 @@ def modify_k8s_autoscaler(action):
         logging.info('Scaling of k8s autoscaler failed. Error code was {}, {}. Exiting.'.format(e.reason, e.body))
         quit()
 
+def delete_node(node_name):
+    """
+    Deletes a kubernetes node from the cluster
+    """
+    import kubernetes.client
+    config.load_kube_config()
+    k8s_api = client.CoreV1Api()
+    # Configure API key authorization: BearerToken
+    configuration = kubernetes.client.Configuration()
+    # create an instance of the API class
+    k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
+    logging.info("Deleting k8s node {}...".format(node_name))
+    try:
+        if not app_config['DRY_RUN']:
+            api_response = k8s_api.delete_node(node_name)
+        else:
+            api_response = k8s_api.delete_node(node_name, dry_run="true")
+        logging.info("Node deleted")
+    except ApiException as e:
+        logging.info("Exception when calling CoreV1Api->delete_node: {}".format(e))
+
 
 def drain_node(node_name):
     """
@@ -122,7 +143,7 @@ def terminate_instance(instance_id):
     logging.info('Terminating ec2 instance {}...'.format(instance_id))
     client = boto3.client('ec2')
     try:
-        response = client.stop_instances(
+        response = client.terminate_instances(
             InstanceIds=[instance_id],
             DryRun=app_config['DRY_RUN']
         )
@@ -268,6 +289,7 @@ def save_asg_tags(asg_name, key, value):
     else:
         logging.info('Skipping asg tag modification due to dry run flag set')
         response = {'message': 'dry run only'}
+
 
 def delete_asg_tags(asg_name, key):
     """
@@ -473,17 +495,23 @@ def update_asgs(asgs, cluster_name):
             continue
         # remove any stale suspentions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
-        # check for tag on asg
-        asg_tag_old_capacity = get_asg_tag(asg_tags, app_config["ASG_STATE_TAG"])
-        if asg_tag_old_capacity.get('Value'):
-            logging.info('Found previous capacity value tag set on asg. Value: {}'.format(asg_tag_old_capacity.get('Value')))
+        # check for previous run tag on asg
+        asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
+        if asg_tag_desired_capacity.get('Value'):
+            logging.info('Found previous capacity value tag set on asg. Value: {}'.format(asg_tag_desired_capacity.get('Value')))
             logging.info('Maintaining previous capacity to not overscale')
-            asg_new_desired_capacity = int(asg_tag_old_capacity.get('Value'))
+            asg_new_desired_capacity = int(asg_tag_desired_capacity.get('Value'))
+            asg_tag_original_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
+            logging('Maintaining original old capacity from a previous run so we can scale back down to original size of: {}'.format(asg_tag_original_capacity.get('Value')))
+            asg_old_desired_capacity = int(asg_tag_original_capacity.get('Value'))
         else:
             logging.info('No previous capacity value tag set on asg')
+            # save original capacity to asg tags
+            logging.info('Setting original capacity on asg')
+            save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
             asg_new_desired_capacity = asg_old_desired_capacity + len(outdated_instances)
             # save new capacity to asg tags
-            save_asg_tags(asg_name, app_config["ASG_STATE_TAG"], asg_new_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], asg_new_desired_capacity)
         # only change the max size if the new capacity is bigger than current max
         if asg_new_desired_capacity > asg_old_max_size:
             asg_new_max_size = asg_new_desired_capacity
@@ -510,21 +538,26 @@ def update_asgs(asgs, cluster_name):
             modify_aws_autoscaling(asg_name, "suspend")
             # start draining and terminating
             for outdated in outdated_instances:
-                # get the k8s node name instead of instance id
-                node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                drain_node(node_name)
-                logging.info('Waiting {}s for node to drain...'.format(app_config['DRAIN_WAIT']))
-                time.sleep(app_config['DRAIN_WAIT'])
-                terminate_instance(outdated['InstanceId'])
-                if not instance_terminated(outdated['InstanceId']):
-                    raise Exception('Instance is failing to terminate. Cancelling out.')
+                # catch any failures so we can resume aws autoscaling
+                try:
+                    # get the k8s node name instead of instance id
+                    node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                    drain_node(node_name)
+                    delete_node(node_name)
+                    terminate_instance(outdated['InstanceId'])
+                    if not instance_terminated(outdated['InstanceId']):
+                        raise Exception('Instance is failing to terminate. Cancelling out.')
+                except Exception as e:
+                    raise RollingUpdateException("Rolling update on asg failed", asg_name)
+
             # scaling cluster back down
             logging.info("Scaling asg back down to original state")
             scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag
-            delete_asg_tags(asg_name, app_config["ASG_STATE_TAG"])
+            delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
+            delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])
             logging.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
         else:
             logging.info('Exiting since asg healthcheck failed')
@@ -557,6 +590,11 @@ if __name__ == "__main__":
             # resume autoscaler after asg updated
             modify_k8s_autoscaler("resume")
             logging.info('*** Rolling update of all asg is complete! ***')
+        except RollingUpdateException as e:
+            logging.info("Rolling update encountered an exception. Resuming aws autoscaling.")
+            modify_aws_autoscaling(e.asg_name, "resume")
+            # resume autoscaler no matter what happens
+            modify_k8s_autoscaler("resume")
         except Exception as e:
             logging.info(e)
             logging.info('*** Rolling update of asg has failed. Exiting ***')

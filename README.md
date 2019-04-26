@@ -30,16 +30,17 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-Set KUBECONFIG
+Set KUBECONFIG and context
 
 ```
 export KUBECONFIG=~/.kube/config
+ktx <environemnt>
 ```
 
 ## Usage
 
 ```
-eks-rolling-update.py [-h] --cluster_name CLUSTER_NAME
+usage: eks-rolling-update.py [-h] --cluster_name CLUSTER_NAME [--plan [PLAN]]
 
 Rolling update on cluster
 
@@ -47,6 +48,9 @@ optional arguments:
   -h, --help            show this help message and exit
   --cluster_name CLUSTER_NAME, -c CLUSTER_NAME
                         the cluster name to perform rolling update on
+  --plan [PLAN], -p [PLAN]
+                        perform a dry run to see which instances are out of
+                        date
 ```
 
 Example:
