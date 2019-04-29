@@ -502,7 +502,7 @@ def update_asgs(asgs, cluster_name):
             logging.info('Maintaining previous capacity to not overscale')
             asg_new_desired_capacity = int(asg_tag_desired_capacity.get('Value'))
             asg_tag_original_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
-            logging('Maintaining original old capacity from a previous run so we can scale back down to original size of: {}'.format(asg_tag_original_capacity.get('Value')))
+            logging.info('Maintaining original old capacity from a previous run so we can scale back down to original size of: {}'.format(asg_tag_original_capacity.get('Value')))
             asg_old_desired_capacity = int(asg_tag_original_capacity.get('Value'))
         else:
             logging.info('No previous capacity value tag set on asg')
