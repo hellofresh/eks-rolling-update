@@ -498,7 +498,7 @@ def update_asgs(asgs, cluster_name):
         # check for previous run tag on asg
         asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
         if asg_tag_desired_capacity.get('Value'):
-            logging.info('Found previous capacity value tag set on asg. Value: {}'.format(asg_tag_desired_capacity.get('Value')))
+            logging.info('Found previous desired capacity value tag set on asg from a previous run. Value: {}'.format(asg_tag_desired_capacity.get('Value')))
             logging.info('Maintaining previous capacity to not overscale')
             asg_new_desired_capacity = int(asg_tag_desired_capacity.get('Value'))
             asg_tag_original_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
