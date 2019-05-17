@@ -3,7 +3,8 @@ import unittest
 import boto3
 import json
 from moto import mock_autoscaling
-from eks_rolling_update import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, get_k8s_nodes, k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id, is_asg_scaled
+from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled
+from lib.k8s import get_k8s_nodes, k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id
 from unittest.mock import Mock, patch
 from mock import mock
 
@@ -110,17 +111,17 @@ class Test(unittest.TestCase):
         self.assertTrue(result)
 
     def test_k8s_node_count(self):
-        with patch('eks_rolling_update.get_k8s_nodes') as mock_nodes:
+        with patch('lib.k8s.get_k8s_nodes') as mock_nodes:
             mock_nodes.return_value = self.k8s_response_mock['items']
             self.assertTrue(k8s_nodes_count(3, 2, 1))
 
     def test_k8s_node_count_fail(self):
-        with patch('eks_rolling_update.get_k8s_nodes') as mock_nodes:
+        with patch('lib.k8s.get_k8s_nodes') as mock_nodes:
             mock_nodes.return_value = self.k8s_response_mock['items']
             self.assertFalse(k8s_nodes_count(4, 2, 1))
 
     def test_get_node_by_instance_id_fail(self):
-        with patch('eks_rolling_update.get_k8s_nodes') as mock_nodes:
+        with patch('lib.k8s.get_k8s_nodes') as mock_nodes:
             mock_nodes.return_value = self.k8s_response_mock['items']
             with self.assertRaises(Exception):
                 get_node_by_instance_id(mock_nodes, 'i-5c407d0022735edff')
