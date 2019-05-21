@@ -16,7 +16,6 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
-
 @mock_autoscaling
 class Test(unittest.TestCase):
 
@@ -64,13 +63,13 @@ class Test(unittest.TestCase):
 
     def test_get_asg_tag(self):
         tags = [
-                    {
-                        'ResourceId': 'string',
-                        'ResourceType': 'string',
-                        'Key': 'eks-rolling-update:desired_capacity',
-                        'Value': '6',
-                        'PropagateAtLaunch': True
-                    },
+            {
+                'ResourceId': 'string',
+                'ResourceType': 'string',
+                'Key': 'eks-rolling-update:desired_capacity',
+                'Value': '6',
+                'PropagateAtLaunch': True
+            },
 
         ]
         response = get_asg_tag(tags, "eks-rolling-update:desired_capacity")
@@ -78,13 +77,13 @@ class Test(unittest.TestCase):
 
     def test_get_asg_tag_fail(self):
         tags = [
-                    {
-                        'ResourceId': 'string',
-                        'ResourceType': 'string',
-                        'Key': 'eks-rolling-update:desired_capacity',
-                        'Value': '6',
-                        'PropagateAtLaunch': True
-                    },
+            {
+                'ResourceId': 'string',
+                'ResourceType': 'string',
+                'Key': 'eks-rolling-update:desired_capacity',
+                'Value': '6',
+                'PropagateAtLaunch': True
+            },
 
         ]
         response = get_asg_tag(tags, "foo")
@@ -128,6 +127,3 @@ class Test(unittest.TestCase):
 
     def test_is_asg_scaled(self):
         self.assertTrue(is_asg_scaled('mock-asg', 3))
-
-
-

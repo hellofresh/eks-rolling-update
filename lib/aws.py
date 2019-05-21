@@ -43,7 +43,7 @@ def terminate_instance(instance_id):
             raise
 
 
-def is_asg_healthy(asg_name, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that all instances in an ASG have a HealthStatus of healthy. Returns False if not
     """
@@ -216,7 +216,7 @@ def instance_outdated(instance_obj, asg_lc_name):
         return False
 
 
-def instance_terminated(instance_id, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that an ec2 instance is terminated or stopped given an InstanceID
     """

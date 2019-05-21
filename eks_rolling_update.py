@@ -8,10 +8,7 @@ from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_
 from lib.exceptions import RollingUpdateException
 
 
-def validate_cluster_health(
-        asg_name,
-        new_desired_asg_capacity,
-        desired_k8s_node_count):
+def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count):
     cluster_healthy = False
     # check if asg has enough nodes first before checking instance health
     if is_asg_scaled(asg_name, new_desired_asg_capacity):
@@ -42,7 +39,6 @@ def validate_cluster_health(
     return cluster_healthy
 
 
-
 def update_asgs(asgs, cluster_name):
     for asg in asgs:
         logger.info('\n')
@@ -67,22 +63,22 @@ def update_asgs(asgs, cluster_name):
         # remove any stale suspentions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
         # check for previous run tag on asg
-        asg_tag_desired_capacity = get_asg_tag(asg_tags, config.app_config["ASG_DESIRED_STATE_TAG"])
+        asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
         if asg_tag_desired_capacity.get('Value'):
             logger.info('Found previous desired capacity value tag set on asg from a previous run. Value: {}'.format(asg_tag_desired_capacity.get('Value')))
             logger.info('Maintaining previous capacity to not overscale')
             asg_new_desired_capacity = int(asg_tag_desired_capacity.get('Value'))
-            asg_tag_original_capacity = get_asg_tag(asg_tags, config.app_config["ASG_ORIG_CAPACITY_TAG"])
+            asg_tag_original_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
             logger.info('Maintaining original old capacity from a previous run so we can scale back down to original size of: {}'.format(asg_tag_original_capacity.get('Value')))
             asg_old_desired_capacity = int(asg_tag_original_capacity.get('Value'))
         else:
             logger.info('No previous capacity value tag set on asg')
             # save original capacity to asg tags
             logger.info('Setting original capacity on asg')
-            save_asg_tags(asg_name, config.app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
             asg_new_desired_capacity = asg_old_desired_capacity + len(outdated_instances)
             # save new capacity to asg tags
-            save_asg_tags(asg_name, config.app_config["ASG_DESIRED_STATE_TAG"], asg_new_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], asg_new_desired_capacity)
         # only change the max size if the new capacity is bigger than current max
         if asg_new_desired_capacity > asg_old_max_size:
             asg_new_max_size = asg_new_desired_capacity
@@ -94,8 +90,8 @@ def update_asgs(asgs, cluster_name):
         k8s_nodes = get_k8s_nodes()
         # now scale up
         scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
-        logger.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(config.app_config['CLUSTER_HEALTH_WAIT'], asg_name))
-        time.sleep(config.app_config['CLUSTER_HEALTH_WAIT'])
+        logger.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
+        time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
         # check how many instances are running
         asg_instance_count = count_all_cluster_instances(cluster_name)
         # check cluster health before doing anything
@@ -127,8 +123,8 @@ def update_asgs(asgs, cluster_name):
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag
-            delete_asg_tags(asg_name, config.app_config["ASG_DESIRED_STATE_TAG"])
-            delete_asg_tags(asg_name, config.app_config["ASG_ORIG_CAPACITY_TAG"])
+            delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
+            delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])
             logger.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
         else:
             logger.info('Exiting since asg healthcheck failed')

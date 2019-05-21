@@ -116,7 +116,7 @@ def drain_node(node_name):
         raise Exception("Node not drained properly. Exiting")
 
 
-def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that all nodes in a cluster are Ready
     """
@@ -147,7 +147,7 @@ def k8s_nodes_ready(max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
     return healthy_nodes
 
 
-def k8s_nodes_count(desired_node_count, max_retry=app_config['MAX_RETRY'], wait=app_config['WAIT']):
+def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that the number of nodes in k8s cluster matches given desired_node_count
     """
