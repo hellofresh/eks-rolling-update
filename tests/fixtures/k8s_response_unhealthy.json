@@ -177,7 +177,7 @@
                                     "last_transition_time":"2019-05-14 16:44:20",
                                     "message": "kubelet is posting ready status",
                                     "reason": "KubeletReady",
-                                    "status": "True",
+                                    "status": "False",
                                     "type": "Ready"}],
                     "config": "None",
                     "daemon_endpoints": {"kubelet_endpoint": {"port": 10250}},
