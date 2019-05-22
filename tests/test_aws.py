@@ -3,25 +3,21 @@ import unittest
 import boto3
 import json
 from moto import mock_autoscaling
-from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled
+from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags
 from unittest.mock import Mock, patch
 from mock import mock
-
 
 @mock_autoscaling
 class TestAWS(unittest.TestCase):
 
     def setUp(self):
-
         client = boto3.client('autoscaling')
         # create asg
         client.create_launch_configuration(
-            LaunchConfigurationName='mock-lc',
+            LaunchConfigurationName='mock-lc-01',
             ImageId='string',
             KeyName='string',
             SecurityGroups=['string'],
-            ClassicLinkVPCId='string',
-            ClassicLinkVPCSecurityGroups=['string'],
             UserData='string',
             InstanceId='string',
             InstanceType='string',
@@ -32,7 +28,7 @@ class TestAWS(unittest.TestCase):
 
         client.create_auto_scaling_group(
             AutoScalingGroupName='mock-asg',
-            LaunchConfigurationName='mock-lc',
+            LaunchConfigurationName='mock-lc-01',
             MinSize=3,
             MaxSize=6,
             DesiredCapacity=3,
@@ -46,6 +42,9 @@ class TestAWS(unittest.TestCase):
                 }
             ]
         )
+
+        with open("tests/fixtures/aws_response_unhealthy.json", "r") as file:
+            self.aws_response_mock_unhealthy = json.load(file)
 
     def test_get_asg_tag(self):
         tags = [
@@ -81,7 +80,14 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertFalse(instance_outdated(instances[0], 'mock-lc'))
+        self.assertFalse(instance_outdated(instances[0], 'mock-lc-01'))
+
+    def test_is_instance_outdated_fail(self):
+        response = self.aws_response_mock_unhealthy
+        asgs = response['AutoScalingGroups']
+        for asg in asgs:
+            instances = asg['Instances']
+        self.assertTrue(instance_outdated(instances[0], 'mock-lc-01'))
 
     def test_count_all_cluster_instances(self):
         count = count_all_cluster_instances('mock-cluster')
@@ -95,5 +101,29 @@ class TestAWS(unittest.TestCase):
         result = is_asg_healthy('mock-asg', 2, 1)
         self.assertTrue(result)
 
+    def test_is_asg_healthy_fail(self):
+        with patch('lib.aws.client.describe_auto_scaling_groups') as describe_auto_scaling_groups_mock:
+            describe_auto_scaling_groups_mock.return_value = self.aws_response_mock_unhealthy
+            result = is_asg_healthy('mock-asg', 2, 1)
+            self.assertFalse(result)
+
     def test_is_asg_scaled(self):
         self.assertTrue(is_asg_scaled('mock-asg', 3))
+
+    def test_modify_aws_autoscaling_suspend(self):
+        response = modify_aws_autoscaling('mock-asg', 'suspend')
+        status_code = response['ResponseMetadata']['HTTPStatusCode']
+        self.assertEqual(status_code, 200)
+
+    def test_modify_aws_autoscaling_fail(self):
+        with self.assertRaises(Exception):
+            modify_aws_autoscaling('mock-asg', 'foo')
+
+    def test_save_asg_tags(self):
+        response = save_asg_tags('mock-asg', 'foo', 'bar')
+        status_code = response['ResponseMetadata']['HTTPStatusCode']
+        self.assertEqual(status_code, 200)
+
+    def test_delete_asg_tags(self):
+        with self.assertRaises(NotImplementedError):
+            response = delete_asg_tags('mock-asg', 'foo')
