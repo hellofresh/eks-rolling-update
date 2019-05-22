@@ -4,13 +4,14 @@ import requests
 from lib.logger import logger
 from config import app_config
 
+client = boto3.client('autoscaling')
+
 
 def get_asgs(cluster_tag):
     """
     Queries AWS and returns all ASG's matching kubernetes.io/cluster/<cluster_tag> = owned
     """
     logger.info('Describing autoscaling groups...')
-    client = boto3.client('autoscaling')
     paginator = client.get_paginator('describe_auto_scaling_groups')
     page_iterator = paginator.paginate(
         PaginationConfig={'PageSize': 100}
@@ -48,7 +49,6 @@ def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_
     Checks that all instances in an ASG have a HealthStatus of healthy. Returns False if not
     """
     retry_count = 1
-    client = boto3.client('autoscaling')
     while retry_count < max_retry:
         asg_healthy = True
         retry_count += 1
@@ -77,7 +77,6 @@ def is_asg_scaled(asg_name, desired_capacity):
     Checks that the number of EC2 instances in an ASG matches desired capacity
     """
     is_scaled = False
-    client = boto3.client('autoscaling')
     logger.info('Checking asg {} instance count...'.format(asg_name))
     response = client.describe_auto_scaling_groups(
         AutoScalingGroupNames=[asg_name], MaxRecords=1
@@ -104,12 +103,11 @@ def modify_aws_autoscaling(asg_name, action):
     """
     Suspends or resumes ASG autoscaling
     """
-    client = boto3.client('autoscaling')
     logger.info('Modifying asg {} autoscaling to {} ...'.format(
         asg_name,
         action)
     )
-    if not app_config['DRY_RUN']:
+    if app_config['DRY_RUN'] is not True:
 
         if action == "suspend":
             response = client.suspend_processes(
@@ -121,6 +119,7 @@ def modify_aws_autoscaling(asg_name, action):
                 ScalingProcesses=['Launch', 'ReplaceUnhealthy'])
         else:
             logger.info('Invalid scaling option')
+            raise Exception('Invalid scaling option')
 
         if response['ResponseMetadata']['HTTPStatusCode'] != requests.codes.ok:
             logger.info('AWS asg modification operation did not succeed. Exiting.')
@@ -137,8 +136,7 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_
     Changes the desired capacity of an asg
     """
     logger.info('Setting asg desired capacity from {} to {} and max size to {}...'.format(current_desired_capacity, new_desired_capacity, new_max_size))
-    client = boto3.client('autoscaling')
-    if not app_config['DRY_RUN']:
+    if app_config['DRY_RUN'] is not True:
         response = client.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             DesiredCapacity=new_desired_capacity,
@@ -156,8 +154,7 @@ def save_asg_tags(asg_name, key, value):
     Adds a tag to asg for later retrieval
     """
     logger.info('Saving tag to asg key: {}, value : {}...'.format(key, value))
-    client = boto3.client('autoscaling')
-    if not app_config['DRY_RUN']:
+    if app_config['DRY_RUN'] is not True:
         response = client.create_or_update_tags(
             Tags=[
                 {
@@ -175,6 +172,7 @@ def save_asg_tags(asg_name, key, value):
     else:
         logger.info('Skipping asg tag modification due to dry run flag set')
         response = {'message': 'dry run only'}
+    return response
 
 
 def delete_asg_tags(asg_name, key):
@@ -182,8 +180,7 @@ def delete_asg_tags(asg_name, key):
     Deletes a tag from asg
     """
     logger.info('Deleting tag from asg key: {}...'.format(key))
-    client = boto3.client('autoscaling')
-    if not app_config['DRY_RUN']:
+    if app_config['DRY_RUN'] is not True:
         response = client.delete_tags(
             Tags=[
                 {
@@ -199,6 +196,7 @@ def delete_asg_tags(asg_name, key):
     else:
         logger.info('Skipping asg tag modification due to dry run flag set')
         response = {'message': 'dry run only'}
+    return response
 
 
 def instance_outdated(instance_obj, asg_lc_name):
