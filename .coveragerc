@@ -4,3 +4,4 @@ omit =
     */distutils/*
     tests/*
     venv/*
+    lib/exceptions.py
