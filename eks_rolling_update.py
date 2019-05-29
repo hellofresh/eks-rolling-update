@@ -115,6 +115,7 @@ def update_asgs(asgs, cluster_name):
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
                 except Exception as e:
+                    logger.info(e)
                     raise RollingUpdateException("Rolling update on asg failed", asg_name)
 
             # scaling cluster back down

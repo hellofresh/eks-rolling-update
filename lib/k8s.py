@@ -81,9 +81,9 @@ def delete_node(node_name):
     logger.info("Deleting k8s node {}...".format(node_name))
     try:
         if not app_config['DRY_RUN']:
-            api_response = k8s_api.delete_node(node_name)
+            k8s_api.delete_node(node_name)
         else:
-            api_response = k8s_api.delete_node(node_name, dry_run="true")
+            k8s_api.delete_node(node_name, dry_run="true")
         logger.info("Node deleted")
     except ApiException as e:
         logger.info("Exception when calling CoreV1Api->delete_node: {}".format(e))
@@ -102,14 +102,14 @@ def drain_node(node_name):
             '--ignore-daemonsets',
             '--delete-local-data',
             '--dry-run'
-            ]
+        ]
         )
     else:
         result = subprocess.run([
             'kubectl', 'drain', node_name,
             '--ignore-daemonsets',
             '--delete-local-data'
-            ]
+        ]
         )
     # If returncode is non-zero, raise a CalledProcessError.
     if result.returncode != 0:

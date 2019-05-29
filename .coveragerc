@@ -1,0 +1,6 @@
+[run]
+omit =
+    */site-packages/*
+    */distutils/*
+    tests/*
+    venv/*

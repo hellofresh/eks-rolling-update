@@ -31,13 +31,13 @@ setup: clean virtualenv requirements
 run:
 	python3 $(CURDIR)/eks_rolling_update.py --help
 
-test: test-unit
+test: code-style test-unit
 
 test-unit:
-	PYTHONPATH=$(CURDIR)/src nosetests -s -d -w tests/unit -v --with-coverage --cover-package ./src
+	PYTHONPATH=$(CURDIR) nose2 --with-coverage
 
 code-style:
-	flake8 --max-line-length=120 src/ bin/ tests/
+	flake8 --ignore E501 eks_rolling_update.py lib/
 
 virtualenv:
 	virtualenv -p python3 $(CURDIR)/$(VENV)
