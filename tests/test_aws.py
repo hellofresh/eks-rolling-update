@@ -2,12 +2,14 @@
 import unittest
 import boto3
 import json
-from moto import mock_autoscaling
-from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags
+from moto import mock_autoscaling, mock_ec2
+from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags, instance_terminated
 from unittest.mock import Mock, patch
 from mock import mock
 
+
 @mock_autoscaling
+@mock_ec2
 class TestAWS(unittest.TestCase):
 
     def setUp(self):
@@ -42,9 +44,14 @@ class TestAWS(unittest.TestCase):
                 }
             ]
         )
+        response = client.describe_auto_scaling_groups(AutoScalingGroupNames=['mock-asg'])
+        self.instance_id = response['AutoScalingGroups'][0]['Instances'][0]['InstanceId']
 
         with open("tests/fixtures/aws_response_unhealthy.json", "r") as file:
             self.aws_response_mock_unhealthy = json.load(file)
+
+        with open("tests/fixtures/aws_response_terminated.json", "r") as file:
+            self.aws_response_mock_terminated = json.load(file)
 
     def test_get_asg_tag(self):
         tags = [
@@ -127,3 +134,11 @@ class TestAWS(unittest.TestCase):
     def test_delete_asg_tags(self):
         with self.assertRaises(NotImplementedError):
             response = delete_asg_tags('mock-asg', 'foo')
+
+    def test_instance_terminated(self):
+        with patch('lib.aws.ec2_client.describe_instances') as describe_instances_mock:
+            describe_instances_mock.return_value = self.aws_response_mock_terminated
+            self.assertTrue(instance_terminated(self.instance_id, 2, 1))
+
+    def test_instance_terminated_fail(self):
+        self.assertFalse(instance_terminated(self.instance_id, 2, 1))

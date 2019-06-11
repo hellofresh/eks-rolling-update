@@ -5,6 +5,7 @@ from lib.logger import logger
 from config import app_config
 
 client = boto3.client('autoscaling')
+ec2_client = boto3.client('ec2')
 
 
 def get_asgs(cluster_tag):
@@ -27,9 +28,8 @@ def terminate_instance(instance_id):
     Terminates EC2 instance given an instance ID
     """
     logger.info('Terminating ec2 instance {}...'.format(instance_id))
-    client = boto3.client('ec2')
     try:
-        response = client.terminate_instances(
+        response = ec2_client.terminate_instances(
             InstanceIds=[instance_id],
             DryRun=app_config['DRY_RUN']
         )
@@ -218,13 +218,12 @@ def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], w
     """
     Checks that an ec2 instance is terminated or stopped given an InstanceID
     """
-    client = boto3.client('ec2')
     retry_count = 1
     while retry_count < max_retry:
         is_instance_terminated = True
         logger.info('Checking instance {} is terminated...'.format(instance_id))
         retry_count += 1
-        response = client.describe_instances(
+        response = ec2_client.describe_instances(
             InstanceIds=[instance_id]
         )
         state = response['Reservations'][0]['Instances'][0]['State']

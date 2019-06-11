@@ -8,7 +8,6 @@ from mock import mock
 from box import Box
 
 
-
 class TestK8S(unittest.TestCase):
 
     def setUp(self):
