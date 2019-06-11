@@ -133,7 +133,7 @@ class TestAWS(unittest.TestCase):
 
     def test_delete_asg_tags(self):
         with self.assertRaises(NotImplementedError):
-            response = delete_asg_tags('mock-asg', 'foo')
+            delete_asg_tags('mock-asg', 'foo')
 
     def test_instance_terminated(self):
         with patch('lib.aws.ec2_client.describe_instances') as describe_instances_mock:
