@@ -11,5 +11,5 @@ RUN mkdir /app
 WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-COPY config.py .
-COPY eks-rolling-update.py .
+COPY lib ./lib
+COPY config.py eks_rolling_update.py ./

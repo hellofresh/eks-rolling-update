@@ -74,7 +74,6 @@ def delete_node(node_name):
     import kubernetes.client
     config.load_kube_config()
     k8s_api = client.CoreV1Api()
-    # Configure API key authorization: BearerToken
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
     k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
