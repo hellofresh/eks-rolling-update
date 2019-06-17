@@ -57,8 +57,8 @@ def modify_k8s_autoscaler(action):
         quit()
     try:
         k8s_api.patch_namespaced_deployment(
-            app_config['AUTOSCALER_DEPLOYMENT'],
-            app_config['AUTOSCALER_NAMESPACE'],
+            app_config['K8S_AUTOSCALER_DEPLOYMENT'],
+            app_config['K8S_AUTOSCALER_NAMESPACE'],
             body
         )
         logger.info('K8s autoscaler modified to replicas: {}'.format(body['spec']['replicas']))
