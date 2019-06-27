@@ -1,0 +1,16 @@
+description: |
+  Performs a rolling update on any EKS cluster nodes
+contact: platform-tribe@hellofresh.com
+known-name: "EKS Rolling Update"
+squad: cloud-runtime
+tribe: platform
+concourse-team: platform.cloud-runtime
+slack-channel: "#tribe-platform"
+labels:
+- eks
+- kubernetes
+# public_urls:
+# private_urls:
+# - not yet
+docs:
+- https://github.com/hellofresh/eks-rolling-update
