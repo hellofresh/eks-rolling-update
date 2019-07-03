@@ -54,7 +54,7 @@ def modify_k8s_autoscaler(action):
         body = {'spec': {'replicas': 2}}
     else:
         logger.info('Invalid k8s autoscaler option')
-        quit()
+        quit(1)
     try:
         k8s_api.patch_namespaced_deployment(
             app_config['K8S_AUTOSCALER_DEPLOYMENT'],
@@ -64,7 +64,7 @@ def modify_k8s_autoscaler(action):
         logger.info('K8s autoscaler modified to replicas: {}'.format(body['spec']['replicas']))
     except ApiException as e:
         logger.info('Scaling of k8s autoscaler failed. Error code was {}, {}. Exiting.'.format(e.reason, e.body))
-        quit()
+        quit(1)
 
 
 def delete_node(node_name):

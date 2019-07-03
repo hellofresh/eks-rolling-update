@@ -144,7 +144,7 @@ if __name__ == "__main__":
     kctl = shutil.which('kubectl')
     if not kctl:
         logger.info('kubectl is required to be installed before proceeding')
-        quit()
+        quit(1)
     filtered_asgs = get_asgs(args.cluster_name)
     # perform a dry run
     if args.plan:
@@ -171,4 +171,4 @@ if __name__ == "__main__":
             if app_config['K8S_AUTOSCALER_ENABLED']:
                 # resume autoscaler no matter what happens
                 modify_k8s_autoscaler("resume")
-            quit()
+            quit(1)
