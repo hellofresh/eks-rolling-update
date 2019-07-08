@@ -1,10 +1,15 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 app_config = {
-    'CLUSTER_HEALTH_WAIT': 90,
-    'AUTOSCALER_NAMESPACE': 'kube-system',
-    'AUTOSCALER_DEPLOYMENT': 'cluster-autoscaler-aws-cluster-autoscaler',
+    'K8S_AUTOSCALER_ENABLED': os.getenv('K8S_AUTOSCALER_ENABLED', True),
+    'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE'),
+    'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT'),
     'ASG_DESIRED_STATE_TAG': 'eks-rolling-update:desired_capacity',
     'ASG_ORIG_CAPACITY_TAG': 'eks-rolling-update:original_capacity',
-    'MAX_RETRY': 12,
-    'WAIT': 20,
-    'DRY_RUN': False
+    'CLUSTER_HEALTH_WAIT': os.getenv('CLUSTER_HEALTH_WAIT', 90),
+    'GLOBAL_MAX_RETRY': os.getenv('GLOBAL_MAX_RETRY', 12),
+    'GLOBAL_HEALTH_WAIT': os.getenv('GLOBAL_HEALTH_WAIT', 20),
+    'DRY_RUN': os.getenv('DRY_RUN', False)
 }
