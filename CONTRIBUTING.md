@@ -49,7 +49,7 @@ Unsure where to begin contributing? You can start by looking through the issues.
 ### Pull Requests
 
 * Include screenshots and animated GIFs in your pull request whenever possible.
-* Follow the [Go](https://github.com/golang/go/wiki/CodeReviewComments) styleguides.
+* Follow the [Python](https://www.python.org/dev/peps/pep-0008/) styleguides.
 * Include thoughtfully-worded, well-structured tests.
 * Document new code
 * End files with a newline.

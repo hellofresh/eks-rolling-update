@@ -1,5 +1,22 @@
 # EKS Rolling Update
 
+[![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
+
+> EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster.
+
+
+- [Intro](#intro)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+
+
+<a name="intro"></a>
+# Intro
+
 EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster. It
 updates worker nodes in a rolling fashion and performs health checks of your EKS cluster to ensure no disruption to service.
 To achieve this, it performs the following actions:
@@ -15,15 +32,16 @@ To achieve this, it performs the following actions:
 * Resumes AWS Autoscaling actions
 * Resumes Kubernetes Autoscaler (Optional)
 
+<a name="requirements"></a>
 ## Requirements
 
-* kubectl installed
-* KUBECONFIG environment variable set
-* AWS credentials
+* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed
+* `KUBECONFIG` environment variable set
+* AWS credentials [configured](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#guide-configuration)
 
 EKS Rolling Update expects that you have valid `KUBECONFIG` and AWS credentials set prior to running.
 
-
+<a name="installation"></a>
 ## Installation
 
 Install
@@ -41,6 +59,7 @@ export KUBECONFIG=~/.kube/config
 ktx <environment>
 ```
 
+<a name="usage"></a>
 ## Usage
 
 ```
@@ -76,3 +95,13 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
+
+<a name="contributing"></a>
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+
+<a name="licence"></a>
+## License
+
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details
