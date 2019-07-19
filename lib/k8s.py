@@ -2,6 +2,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 import subprocess
 import time
+import sys
 from lib.logger import logger
 from config import app_config
 
@@ -54,7 +55,7 @@ def modify_k8s_autoscaler(action):
         body = {'spec': {'replicas': 2}}
     else:
         logger.info('Invalid k8s autoscaler option')
-        quit(1)
+        sys.exit(1)
     try:
         k8s_api.patch_namespaced_deployment(
             app_config['K8S_AUTOSCALER_DEPLOYMENT'],
@@ -64,7 +65,7 @@ def modify_k8s_autoscaler(action):
         logger.info('K8s autoscaler modified to replicas: {}'.format(body['spec']['replicas']))
     except ApiException as e:
         logger.info('Scaling of k8s autoscaler failed. Error code was {}, {}. Exiting.'.format(e.reason, e.body))
-        quit(1)
+        sys.exit(1)
 
 
 def delete_node(node_name):

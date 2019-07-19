@@ -1,3 +1,4 @@
+import sys
 import argparse
 import time
 import shutil
@@ -166,11 +167,11 @@ if __name__ == "__main__":
                 # resume autoscaler no matter what happens
                 modify_k8s_autoscaler("resume")
             # Send exit code 1 to the caller so CI shows a failure
-            quit(1)
+            sys.exit(1)
         except Exception as e:
             logger.info(e)
             logger.info('*** Rolling update of asg has failed. Exiting ***')
             if app_config['K8S_AUTOSCALER_ENABLED']:
                 # resume autoscaler no matter what happens
                 modify_k8s_autoscaler("resume")
-            quit(1)
+            sys.exit(1)
