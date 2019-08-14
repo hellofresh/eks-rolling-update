@@ -1,3 +1,7 @@
+<p align="center">
+  <img height="150px" src="./logo.png"  alt="EKS Rolling Update" title="EKS Rolling Update">
+</p>
+
 # EKS Rolling Update
 
 [![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
