@@ -285,7 +285,7 @@ def detach_instance(instance_id, asg_name):
     """
     Detach EC2 instance from ASG given an instance ID and an ASG name
     """
-    logger.info('Detaching ec2 instance {} from asg {}...'.format(instance_id,asg_name))
+    logger.info('Detaching ec2 instance {} from asg {}...'.format(instance_id, asg_name))
     try:
         response = client.detach_instances(
             InstanceIds=[instance_id],
