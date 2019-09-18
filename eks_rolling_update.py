@@ -4,7 +4,7 @@ import time
 import shutil
 from config import app_config
 from lib.logger import logger
-from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated, instance_terminated, get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags
+from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated, instance_terminated, get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, detach_instance, instance_detached
 from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, drain_node, delete_node
 from lib.exceptions import RollingUpdateException
 
@@ -115,13 +115,13 @@ def update_asgs(asgs, cluster_name):
                     terminate_instance(outdated['InstanceId'])
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
+                    detach_instance(outdated['InstanceId'], asg_name)
+                    if not instance_detached(outdated['InstanceId']):
+                        raise Exception('Instance is failing to detach from ASG. Cancelling out.')
                 except Exception as e:
                     logger.info(e)
                     raise RollingUpdateException("Rolling update on asg failed", asg_name)
 
-            # scaling cluster back down
-            logger.info("Scaling asg back down to original state")
-            scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag

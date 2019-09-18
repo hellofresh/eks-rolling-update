@@ -32,7 +32,7 @@ To achieve this, it performs the following actions:
 * Suspends AWS Autoscaling actions while update is in progress
 * Drains outdated EKS outdated worker nodes one by one
 * Terminates EC2 instances of the worker nodes one by one
-* Scales down the ASG to original count
+* Detaches EC2 instances from the ASG one by one
 * Resumes AWS Autoscaling actions
 * Resumes Kubernetes Autoscaler (Optional)
 
