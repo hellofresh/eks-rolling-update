@@ -152,7 +152,7 @@ if __name__ == "__main__":
         plan_asgs(filtered_asgs)
     else:
         # perform real update
-        if app_config['K8S_AUTOSCALER_ENABLED']:
+        if app_config['K8S_AUTOSCALER_ENABLED'] is True:
             # pause k8s autoscaler
             modify_k8s_autoscaler("pause")
         try:
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         except RollingUpdateException as e:
             logger.info("Rolling update encountered an exception. Resuming aws autoscaling.")
             modify_aws_autoscaling(e.asg_name, "resume")
-            if app_config['K8S_AUTOSCALER_ENABLED']:
+            if app_config['K8S_AUTOSCALER_ENABLED'] is True:
                 # resume autoscaler no matter what happens
                 modify_k8s_autoscaler("resume")
             # Send exit code 1 to the caller so CI shows a failure
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         except Exception as e:
             logger.info(e)
             logger.info('*** Rolling update of asg has failed. Exiting ***')
-            if app_config['K8S_AUTOSCALER_ENABLED']:
+            if app_config['K8S_AUTOSCALER_ENABLED'] is True:
                 # resume autoscaler no matter what happens
                 modify_k8s_autoscaler("resume")
             sys.exit(1)

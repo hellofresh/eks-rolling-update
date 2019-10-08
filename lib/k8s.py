@@ -96,7 +96,7 @@ def drain_node(node_name):
     replicate the same functionality here would be too time consuming
     """
     logger.info('Draining worker node {}...'.format(node_name))
-    if app_config['DRY_RUN']:
+    if app_config['DRY_RUN'] is True:
         result = subprocess.run([
             'kubectl', 'drain', node_name,
             '--ignore-daemonsets',
