@@ -122,6 +122,9 @@ def update_asgs(asgs, cluster_name):
                     logger.info(e)
                     raise RollingUpdateException("Rolling update on asg failed", asg_name)
 
+            # scaling cluster back down
+            logger.info("Scaling asg back down to original state")
+            scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
             # resume aws autoscaling
             modify_aws_autoscaling(asg_name, "resume")
             # remove aws tag
