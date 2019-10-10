@@ -279,3 +279,48 @@ def count_all_cluster_instances(cluster_name):
         count += len(asg['Instances'])
     logger.info("Current asg instance count in cluster is: {}. K8s node count should match this number".format(count))
     return count
+
+
+def detach_instance(instance_id, asg_name):
+    """
+    Detach EC2 instance from ASG given an instance ID and an ASG name
+    """
+    logger.info('Detaching ec2 instance {} from asg {}...'.format(instance_id, asg_name))
+    try:
+        response = client.detach_instances(
+            InstanceIds=[instance_id],
+            AutoScalingGroupName=asg_name,
+            ShouldDecrementDesiredCapacity=True
+        )
+        if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
+            logger.info('Instance detachement from ASG succeeded.')
+        else:
+            logger.info('Instance detachement from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+            raise Exception('Instance detachement from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+
+    except client.exceptions.ClientError as e:
+        if 'DryRunOperation' not in str(e):
+            raise
+
+
+def instance_detached(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
+    """
+    Checks that an ec2 instance is detached from any asg given an InstanceID
+    """
+    retry_count = 1
+    while retry_count < max_retry:
+        is_instance_detached = True
+        logger.info('Checking instance {} is detached...'.format(instance_id))
+        retry_count += 1
+        response = client.describe_auto_scaling_instances(
+            InstanceIds=[instance_id], MaxRecords=1
+        )
+        if len(response['AutoScalingInstances']) != 0:
+            is_instance_detached = False
+            logger.info('Instance {} is still attached, checking again...'.format(instance_id))
+        else:
+            logger.info('Instance {} detached!'.format(instance_id))
+            is_instance_detached = True
+            break
+        time.sleep(wait)
+    return is_instance_detached
