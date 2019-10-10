@@ -25,7 +25,7 @@ def get_asgs(cluster_tag):
 
 def get_launch_template(lt_name):
     """
-    Queries AWS and returns all the versions of a given Launch Template
+    Queries AWS and returns the details of a given Launch Template
     """
     logger.info(f'Describing launch template for {lt_name}...')
     response = ec2_client.describe_launch_templates(LaunchTemplateNames=[lt_name])
@@ -213,9 +213,8 @@ def instance_outdated_launchconfiguration(instance_obj, asg_lc_name):
     Checks that the launch configuration on an instance matches a given string
     """
     # only one launch config is kept so on some instances it may not actually exist. Making the launch config empty
-
-    instance_id = instance_obj['InstanceId']
     lc_name = instance_obj.get('LaunchConfigurationName')
+    instance_id = instance_obj['InstanceId']
 
     if lc_name != asg_lc_name:
         logger.info("Instance id {} launch config of '{}' does not match asg launch config of '{}'".format(instance_id, lc_name, asg_lc_name))
@@ -227,13 +226,13 @@ def instance_outdated_launchconfiguration(instance_obj, asg_lc_name):
 
 def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     """
-    Checks that the launch configuration on an instance matches a given string
+    Checks that the launch template on an instance matches a given string and version. This is often configured in the
+    auto scaling group as $Latest or $Default which we can resolve to an actual version number through the
+    describe_launch_templates boto3 method (wrapped in get_launch_template).
     """
-    # only one launch config is kept so on some instances it may not actually exist. Making the launch config empty
-
     instance_id = instance_obj['InstanceId']
     lt_name = instance_obj['LaunchTemplate']['LaunchTemplateName']
-    lt_version = instance_obj['LaunchTemplate']['Version']
+    lt_version = int(instance_obj['LaunchTemplate']['Version'])
 
     if lt_name != asg_lt_name:
         logger.info("Instance id {} launch template of '{}' does not match asg launch template of '{}'".format(instance_id, lt_name, asg_lt_name))
@@ -250,7 +249,7 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
             logger.info(
                 "Instance id {} launch template version of '{}' does not match asg launch template version of '{}'".format(instance_id, lt_version, default_lt_version))
             return True
-    elif asg_lt_version != lt_version:
+    elif lt_version != int(asg_lt_version):
         logger.info(f"Instance id {instance_id} has a different launch configuration version to the ASG")
 
     logger.info("Instance id {} : OK ".format(instance_id))
