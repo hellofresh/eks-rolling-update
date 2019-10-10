@@ -1,9 +1,9 @@
-
+import os
 import unittest
 import boto3
 import json
 from moto import mock_autoscaling, mock_ec2
-from lib.aws import get_asg_tag, get_asgs, instance_outdated, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags, instance_terminated
+from lib.aws import get_asg_tag, get_asgs, instance_outdated_launchconfiguration, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags, instance_terminated
 from unittest.mock import Mock, patch
 from mock import mock
 
@@ -46,11 +46,11 @@ class TestAWS(unittest.TestCase):
         )
         response = client.describe_auto_scaling_groups(AutoScalingGroupNames=['mock-asg'])
         self.instance_id = response['AutoScalingGroups'][0]['Instances'][0]['InstanceId']
-
-        with open("tests/fixtures/aws_response_unhealthy.json", "r") as file:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(f"{current_dir}/fixtures/aws_response_unhealthy.json", "r") as file:
             self.aws_response_mock_unhealthy = json.load(file)
 
-        with open("tests/fixtures/aws_response_terminated.json", "r") as file:
+        with open(f"{current_dir}/fixtures/aws_response_terminated.json", "r") as file:
             self.aws_response_mock_terminated = json.load(file)
 
     def test_get_asg_tag(self):
@@ -87,14 +87,14 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertFalse(instance_outdated(instances[0], 'mock-lc-01'))
+        self.assertFalse(instance_outdated_launchconfiguration(instances[0], 'mock-lc-01'))
 
     def test_is_instance_outdated_fail(self):
         response = self.aws_response_mock_unhealthy
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertTrue(instance_outdated(instances[0], 'mock-lc-01'))
+        self.assertTrue(instance_outdated_launchconfiguration(instances[0], 'mock-lc-01'))
 
     def test_count_all_cluster_instances(self):
         count = count_all_cluster_instances('mock-cluster')

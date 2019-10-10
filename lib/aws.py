@@ -23,6 +23,15 @@ def get_asgs(cluster_tag):
     return filtered_asgs
 
 
+def get_launch_template(lt_name):
+    """
+    Queries AWS and returns all the versions of a given Launch Template
+    """
+    logger.info(f'Describing launch template for {lt_name}...')
+    response = ec2_client.describe_launch_templates(LaunchTemplateNames=[lt_name])
+    return response['LaunchTemplates'][0]
+
+
 def terminate_instance(instance_id):
     """
     Terminates EC2 instance given an instance ID
@@ -199,19 +208,53 @@ def delete_asg_tags(asg_name, key):
     return response
 
 
-def instance_outdated(instance_obj, asg_lc_name):
+def instance_outdated_launchconfiguration(instance_obj, asg_lc_name):
     """
     Checks that the launch configuration on an instance matches a given string
     """
     # only one launch config is kept so on some instances it may not actually exist. Making the launch config empty
-    lc_name = instance_obj.get('LaunchConfigurationName')
+
     instance_id = instance_obj['InstanceId']
+    lc_name = instance_obj.get('LaunchConfigurationName')
+
     if lc_name != asg_lc_name:
         logger.info("Instance id {} launch config of '{}' does not match asg launch config of '{}'".format(instance_id, lc_name, asg_lc_name))
         return True
     else:
         logger.info("Instance id {} : OK ".format(instance_id))
         return False
+
+
+def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
+    """
+    Checks that the launch configuration on an instance matches a given string
+    """
+    # only one launch config is kept so on some instances it may not actually exist. Making the launch config empty
+
+    instance_id = instance_obj['InstanceId']
+    lt_name = instance_obj['LaunchTemplate']['LaunchTemplateName']
+    lt_version = instance_obj['LaunchTemplate']['Version']
+
+    if lt_name != asg_lt_name:
+        logger.info("Instance id {} launch template of '{}' does not match asg launch template of '{}'".format(instance_id, lt_name, asg_lt_name))
+        return True
+    elif asg_lt_version == "$Latest":
+        latest_lt_version = get_launch_template(asg_lt_name)['LatestVersionNumber']
+        if lt_version != latest_lt_version:
+            logger.info(
+                "Instance id {} launch template version of '{}' does not match asg launch template version of '{}'".format(instance_id, lt_version, latest_lt_version))
+            return True
+    elif asg_lt_version == "$Default":
+        default_lt_version = get_launch_template(asg_lt_name)['DefaultVersionNumber']
+        if lt_version != default_lt_version:
+            logger.info(
+                "Instance id {} launch template version of '{}' does not match asg launch template version of '{}'".format(instance_id, lt_version, default_lt_version))
+            return True
+    elif asg_lt_version != lt_version:
+        logger.info(f"Instance id {instance_id} has a different launch configuration version to the ASG")
+
+    logger.info("Instance id {} : OK ".format(instance_id))
+    return False
 
 
 def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
@@ -245,13 +288,30 @@ def plan_asgs(asgs):
     """
     for asg in asgs:
         logger.info('*** Checking autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
-        asg_lc_name = asg['LaunchConfigurationName']
+        asg_name = asg['AutoScalingGroupName']
+        launch_type = ""
+        if 'LaunchConfigurationName' in asg:
+            launch_type = "LaunchConfiguration"
+            asg_lc_name = asg['LaunchConfigurationName']
+        elif 'MixedInstancesPolicy' in asg:
+            launch_type = "LaunchTemplate"
+            asg_lt_name = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
+                'LaunchTemplateName']
+            asg_lt_version = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
+                'Version']
+        else:
+            logger.error(f"Auto Scaling Group {asg_name} doesn't have LaunchConfigurationName or MixedInstancesPolicy")
+
         instances = asg['Instances']
         # return a list of outdated instances
         outdated_instances = []
         for instance in instances:
-            if instance_outdated(instance, asg_lc_name):
-                outdated_instances.append(instance)
+            if launch_type == "LaunchConfiguration":
+                if instance_outdated_launchconfiguration(instance, asg_lc_name):
+                    outdated_instances.append(instance)
+            elif launch_type == "LaunchTemplate":
+                if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version):
+                    outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )

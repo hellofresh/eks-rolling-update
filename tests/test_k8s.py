@@ -1,4 +1,4 @@
-
+import os
 import unittest
 import json
 from moto import mock_autoscaling
@@ -11,11 +11,12 @@ from box import Box
 class TestK8S(unittest.TestCase):
 
     def setUp(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
 
-        with open("tests/fixtures/k8s_response.json", "r") as file:
+        with open(f"{current_dir}/fixtures/k8s_response.json", "r") as file:
             self.k8s_response_mock = json.load(file)
 
-        with open("tests/fixtures/k8s_response_unhealthy.json", "r") as file:
+        with open(f"{current_dir}/fixtures/k8s_response_unhealthy.json", "r") as file:
             self.k8s_response_mock_unhealthy = json.load(file)
 
     def test_k8s_node_count(self):

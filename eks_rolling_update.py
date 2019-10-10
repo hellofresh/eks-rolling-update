@@ -4,7 +4,9 @@ import time
 import shutil
 from config import app_config
 from lib.logger import logger
-from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated, instance_terminated, get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, detach_instance, instance_detached
+from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated_launchconfiguration, instance_terminated, \
+    get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, \
+    scale_asg, plan_asgs, delete_asg_tags, detach_instance, instance_detached, instance_outdated_launchtemplate
 from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, drain_node, delete_node
 from lib.exceptions import RollingUpdateException
 
@@ -45,7 +47,19 @@ def update_asgs(asgs, cluster_name):
         logger.info('\n')
         logger.info('****  Starting rolling update for autoscaling group {}  ****'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
-        asg_lc_name = asg['LaunchConfigurationName']
+        launch_type = ""
+        if 'LaunchConfigurationName' in asg:
+            launch_type = "LaunchConfiguration"
+            asg_lc_name = asg['LaunchConfigurationName']
+        elif 'MixedInstancesPolicy' in asg:
+            launch_type = "LaunchTemplate"
+            asg_lt_name = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
+                'LaunchTemplateName']
+            asg_lt_version = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
+                'Version']
+        else:
+            logger.error(f"Auto Scaling Group {asg_name} doesn't have LaunchConfigurationName or MixedInstancesPolicy")
+
         asg_old_max_size = asg['MaxSize']
         instances = asg['Instances']
         asg_old_desired_capacity = asg['DesiredCapacity']
@@ -53,8 +67,12 @@ def update_asgs(asgs, cluster_name):
         # return a list of outdated instances
         outdated_instances = []
         for instance in instances:
-            if instance_outdated(instance, asg_lc_name):
-                outdated_instances.append(instance)
+            if launch_type == "LaunchConfiguration":
+                if instance_outdated_launchconfiguration(instance, asg_lc_name):
+                    outdated_instances.append(instance)
+            elif launch_type == "LaunchTemplate":
+                if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version):
+                    outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )

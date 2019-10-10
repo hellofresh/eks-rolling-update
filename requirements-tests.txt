@@ -1,6 +1,7 @@
-moto
-python-box==3.4.0
-flake8==3.7.7
-nose2==0.9.1
-kubernetes
-python-dotenv==0.10.2
+moto~=1.3.13
+python-box~=3.4.0
+flake8~=3.7.7
+nose2~=0.9.1
+kubernetes~=10.0.1
+python-dotenv~=0.10.2
+python-box~=3.4.5
