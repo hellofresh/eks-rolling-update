@@ -357,10 +357,10 @@ def detach_instance(instance_id, asg_name):
             ShouldDecrementDesiredCapacity=True
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
-            logger.info('Instance detachement from ASG succeeded.')
+            logger.info('Instance detachment from ASG succeeded.')
         else:
-            logger.info('Instance detachement from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
-            raise Exception('Instance detachement from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+            logger.info('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+            raise Exception('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
 
     except client.exceptions.ClientError as e:
         if 'DryRunOperation' not in str(e):

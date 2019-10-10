@@ -28,7 +28,7 @@ def get_node_by_instance_id(k8s_nodes, instance_id):
     logger.info('Searching for k8s node name by instance id...')
     for k8s_node in k8s_nodes:
         if instance_id in k8s_node.spec.provider_id:
-            logger.info('InstanceId {} is node {} in kuberentes land'.format(instance_id, k8s_node.metadata.name))
+            logger.info('InstanceId {} is node {} in kubernetes land'.format(instance_id, k8s_node.metadata.name))
             node_name = k8s_node.metadata.name
     if not node_name:
         logger.info("Could not find a k8s node name for that instance id. Exiting")

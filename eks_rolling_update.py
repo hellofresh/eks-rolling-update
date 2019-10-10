@@ -140,6 +140,11 @@ def update_asgs(asgs, cluster_name):
                     detach_instance(outdated['InstanceId'], asg_name)
                     if not instance_detached(outdated['InstanceId']):
                         raise Exception('Instance is failing to detach from ASG. Cancelling out.')
+
+                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
+                    if between_nodes_wait != 0:
+                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                        time.sleep(between_nodes_wait)
                 except Exception as e:
                     logger.info(e)
                     raise RollingUpdateException("Rolling update on asg failed", asg_name)

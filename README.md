@@ -6,7 +6,7 @@
 
 [![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
 
-> EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster.
+> EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster.
 
 
 - [Intro](#intro)
@@ -21,12 +21,12 @@
 <a name="intro"></a>
 # Intro
 
-EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster. It
+EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster. It
 updates worker nodes in a rolling fashion and performs health checks of your EKS cluster to ensure no disruption to service.
 To achieve this, it performs the following actions:
 
 * Pauses Kubernetes Autoscaler (Optional)
-* Finds a list of worker nodes per ASG that do not have a launch config that matches the ASG
+* Finds a list of worker nodes per ASG that do not have a launch config or template that matches the ASG
 * Scales up the desired capacity on the ASG
 * Ensures the ASG are healthy and that the new nodes have joined the EKS cluster
 * Suspends AWS Autoscaling actions while update is in progress
@@ -99,6 +99,7 @@ eks-rolling-update.py -c my-eks-cluster
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                       | 90                                   |
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
+| BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
 
 <a name="contributing"></a>
