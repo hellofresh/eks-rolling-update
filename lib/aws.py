@@ -286,9 +286,10 @@ def plan_asgs(asgs):
     """
     Checks to see which asgs are out of date
     """
+    asg_outdated_instance_dict = {}
     for asg in asgs:
-        logger.info('*** Checking autoscaling group {} ***'.format(asg['AutoScalingGroupName']))
         asg_name = asg['AutoScalingGroupName']
+        logger.info('*** Checking autoscaling group {} ***'.format(asg_name))
         launch_type = ""
         if 'LaunchConfigurationName' in asg:
             launch_type = "LaunchConfiguration"
@@ -319,6 +320,9 @@ def plan_asgs(asgs):
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )
+        asg_outdated_instance_dict[asg_name] = outdated_instances, asg
+
+    return asg_outdated_instance_dict
 
 
 def get_asg_tag(tags, tag_name):

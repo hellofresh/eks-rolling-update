@@ -12,5 +12,6 @@ app_config = {
     'GLOBAL_MAX_RETRY': os.getenv('GLOBAL_MAX_RETRY', 12),
     'GLOBAL_HEALTH_WAIT': os.getenv('GLOBAL_HEALTH_WAIT', 20),
     'BETWEEN_NODES_WAIT': os.getenv('BETWEEN_NODES_WAIT', 0),
+    'CORDON_ENABLED': os.getenv('CORDON_ENABLED', True),
     'DRY_RUN': os.getenv('DRY_RUN', False)
 }

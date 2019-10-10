@@ -26,7 +26,8 @@ updates worker nodes in a rolling fashion and performs health checks of your EKS
 To achieve this, it performs the following actions:
 
 * Pauses Kubernetes Autoscaler (Optional)
-* Finds a list of worker nodes per ASG that do not have a launch config or template that matches the ASG
+* Finds a list of worker nodes that do not have a launch config or template that matches their ASG
+* Cordons the outdated worker nodes
 * Scales up the desired capacity on the ASG
 * Ensures the ASG are healthy and that the new nodes have joined the EKS cluster
 * Suspends AWS Autoscaling actions while update is in progress
@@ -100,6 +101,7 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
+| CORDON_ENABLED            | If True all outdated nodes will be cordoned prior to update                                                        | True                                 |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
 
 <a name="contributing"></a>

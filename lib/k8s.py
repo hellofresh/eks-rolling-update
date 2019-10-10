@@ -74,7 +74,6 @@ def delete_node(node_name):
     """
     import kubernetes.client
     config.load_kube_config()
-    k8s_api = client.CoreV1Api()
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
     k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
@@ -87,6 +86,27 @@ def delete_node(node_name):
         logger.info("Node deleted")
     except ApiException as e:
         logger.info("Exception when calling CoreV1Api->delete_node: {}".format(e))
+
+
+def cordon_node(node_name):
+    """
+    Cordon a kubernetes node to avoid new pods being scheduled on it
+    """
+    import kubernetes.client
+    config.load_kube_config()
+    configuration = kubernetes.client.Configuration()
+    # create an instance of the API class
+    k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
+    logger.info("Cordoning k8s node {}...".format(node_name))
+    try:
+        api_call_body = client.V1Node(spec=client.V1NodeSpec(unschedulable=True))
+        if not app_config['DRY_RUN']:
+            k8s_api.patch_node(node_name, api_call_body)
+        else:
+            k8s_api.patch_node(node_name, api_call_body, dry_run=True)
+        logger.info("Node cordoned")
+    except ApiException as e:
+        logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
 
 
 def drain_node(node_name):

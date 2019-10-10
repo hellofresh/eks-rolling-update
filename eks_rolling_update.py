@@ -7,7 +7,8 @@ from lib.logger import logger
 from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated_launchconfiguration, instance_terminated, \
     get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, \
     scale_asg, plan_asgs, delete_asg_tags, detach_instance, instance_detached, instance_outdated_launchtemplate
-from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, drain_node, delete_node
+from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
+    drain_node, delete_node, cordon_node
 from lib.exceptions import RollingUpdateException
 
 
@@ -43,47 +44,32 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node
 
 
 def update_asgs(asgs, cluster_name):
-    for asg in asgs:
-        logger.info('\n')
-        logger.info('****  Starting rolling update for autoscaling group {}  ****'.format(asg['AutoScalingGroupName']))
-        asg_name = asg['AutoScalingGroupName']
-        launch_type = ""
-        if 'LaunchConfigurationName' in asg:
-            launch_type = "LaunchConfiguration"
-            asg_lc_name = asg['LaunchConfigurationName']
-        elif 'LaunchTemplate' in asg:
-            launch_type = "LaunchTemplate"
-            asg_lt_name = asg['LaunchTemplate']['LaunchTemplateName']
-            asg_lt_version = asg['LaunchTemplate']['Version']
-        elif 'MixedInstancesPolicy' in asg:
-            launch_type = "LaunchTemplate"
-            asg_lt_name = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
-                'LaunchTemplateName']
-            asg_lt_version = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
-                'Version']
-        else:
-            logger.error(f"Auto Scaling Group {asg_name} doesn't have LaunchConfigurationName or MixedInstancesPolicy")
+    asg_outdated_instance_dict = plan_asgs(asgs)
 
+    # Cordon all the outdated nodes
+    k8s_nodes = get_k8s_nodes()
+    for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+        outdated_instances, asg = asg_tuple
+        for outdated in outdated_instances:
+            try:
+                # get the k8s node name instead of instance id
+                node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                cordon_node(node_name)
+            except Exception as e:
+                logger.error(e)
+                exit(1)
+
+    for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+        outdated_instances, asg = asg_tuple
+        logger.info('\n')
+        logger.info('****  Starting rolling update for autoscaling group {}  ****'.format(asg_name))
         asg_old_max_size = asg['MaxSize']
-        instances = asg['Instances']
         asg_old_desired_capacity = asg['DesiredCapacity']
         asg_tags = asg['Tags']
-        # return a list of outdated instances
-        outdated_instances = []
-        for instance in instances:
-            if launch_type == "LaunchConfiguration":
-                if instance_outdated_launchconfiguration(instance, asg_lc_name):
-                    outdated_instances.append(instance)
-            elif launch_type == "LaunchTemplate":
-                if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version):
-                    outdated_instances.append(instance)
-        logger.info('Found {} outdated instances'.format(
-            len(outdated_instances))
-        )
         # skip to next asg if there are no outdated instances
         if len(outdated_instances) == 0:
             continue
-        # remove any stale suspentions from asg that may be present
+        # remove any stale suspensions from asg that may be present
         modify_aws_autoscaling(asg_name, "resume")
         # check for previous run tag on asg
         asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
@@ -141,7 +127,7 @@ def update_asgs(asgs, cluster_name):
                     if not instance_detached(outdated['InstanceId']):
                         raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
-                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
+                    between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
                     if between_nodes_wait != 0:
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
