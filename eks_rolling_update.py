@@ -47,17 +47,19 @@ def update_asgs(asgs, cluster_name):
     asg_outdated_instance_dict = plan_asgs(asgs)
 
     # Cordon all the outdated nodes
-    k8s_nodes = get_k8s_nodes()
-    for asg_name, asg_tuple in asg_outdated_instance_dict.items():
-        outdated_instances, asg = asg_tuple
-        for outdated in outdated_instances:
-            try:
-                # get the k8s node name instead of instance id
-                node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                cordon_node(node_name)
-            except Exception as e:
-                logger.error(e)
-                exit(1)
+    if app_config['CORDON_ENABLED']:
+        k8s_nodes = get_k8s_nodes()
+        for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+            outdated_instances, asg = asg_tuple
+            for outdated in outdated_instances:
+                try:
+                    # get the k8s node name instead of instance id
+                    node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                    cordon_node(node_name)
+                except Exception as e:
+                    logger.error(f"Encountered an error when cordoning node {node_name}")
+                    logger.error(e)
+                    exit(1)
 
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
         outdated_instances, asg = asg_tuple
