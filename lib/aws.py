@@ -292,6 +292,10 @@ def plan_asgs(asgs):
         if 'LaunchConfigurationName' in asg:
             launch_type = "LaunchConfiguration"
             asg_lc_name = asg['LaunchConfigurationName']
+        elif 'LaunchTemplate' in asg:
+            launch_type = "LaunchTemplate"
+            asg_lt_name = asg['LaunchTemplate']['LaunchTemplateName']
+            asg_lt_version = asg['LaunchTemplate']['Version']
         elif 'MixedInstancesPolicy' in asg:
             launch_type = "LaunchTemplate"
             asg_lt_name = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
