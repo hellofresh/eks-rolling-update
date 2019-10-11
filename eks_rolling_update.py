@@ -4,9 +4,9 @@ import time
 import shutil
 from config import app_config
 from lib.logger import logger
-from lib.aws import is_asg_scaled, is_asg_healthy, instance_outdated_launchconfiguration, instance_terminated, \
-    get_asg_tag, modify_aws_autoscaling, count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, \
-    scale_asg, plan_asgs, delete_asg_tags, detach_instance, instance_detached, instance_outdated_launchtemplate
+from lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
+    count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, \
+    detach_instance, instance_detached
 from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node
 from lib.exceptions import RollingUpdateException
@@ -52,6 +52,7 @@ def update_asgs(asgs, cluster_name):
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
             for outdated in outdated_instances:
+                node_name = ""
                 try:
                     # get the k8s node name instead of instance id
                     node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])

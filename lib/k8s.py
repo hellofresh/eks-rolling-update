@@ -42,7 +42,6 @@ def modify_k8s_autoscaler(action):
     """
     import kubernetes.client
     config.load_kube_config()
-    k8s_api = client.CoreV1Api()
     # Configure API key authorization: BearerToken
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
@@ -142,6 +141,7 @@ def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['G
     """
     logger.info('Checking k8s nodes health status...')
     retry_count = 1
+    healthy_nodes = False
     while retry_count < max_retry:
         # reset healthy nodes after every loop
         healthy_nodes = True
@@ -173,6 +173,7 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     """
     logger.info('Checking k8s expected nodes are online after asg scaled up...')
     retry_count = 1
+    nodes_online = False
     while retry_count < max_retry:
         nodes_online = True
         retry_count += 1
