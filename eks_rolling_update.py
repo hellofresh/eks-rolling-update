@@ -55,11 +55,17 @@ def update_asgs(asgs, cluster_name):
         asg_old_max_size = asg['MaxSize']
         asg_old_desired_capacity = asg['DesiredCapacity']
         asg_tags = asg['Tags']
+
+        # remove any stale suspensions from asg that may be present
+        modify_aws_autoscaling(asg_name, "resume")
+
+        asg_scale_dict[asg_name] = {'new': asg_old_desired_capacity, 'old': asg_old_desired_capacity,
+                                    'max': asg_old_max_size}
+
         # skip to next asg if there are no outdated instances
         if len(outdated_instances) == 0:
             continue
-        # remove any stale suspensions from asg that may be present
-        modify_aws_autoscaling(asg_name, "resume")
+
         # check for previous run tag on asg
         asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
         if asg_tag_desired_capacity.get('Value'):
@@ -83,7 +89,10 @@ def update_asgs(asgs, cluster_name):
         else:
             # dont change the size
             asg_new_max_size = asg_old_max_size
-        asg_scale_dict[asg_name] = asg_new_desired_capacity, asg_old_max_size
+
+        asg_scale_dict[asg_name] = {'new': asg_new_desired_capacity, 'old': asg_old_desired_capacity,
+                                    'max': asg_old_max_size}
+
         # now scale up
         scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
         logger.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
@@ -152,9 +161,7 @@ def update_asgs(asgs, cluster_name):
 
         # scaling cluster back down
         logger.info("Scaling asg back down to original state")
-        asg_old_desired_capacity = asg['DesiredCapacity']
-        asg_new_desired_capacity, asg_old_max_size = asg_scale_dict[asg_name]
-        scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
+        scale_asg(asg_name, asg_scale_dict['new'], asg_scale_dict['old'], asg_scale_dict['max'])
         # resume aws autoscaling
         modify_aws_autoscaling(asg_name, "resume")
         # remove aws tag
