@@ -27,15 +27,16 @@ To achieve this, it performs the following actions:
 
 * Pauses Kubernetes Autoscaler (Optional)
 * Finds a list of worker nodes that do not have a launch config or template that matches their ASG
-* Cordons the outdated worker nodes
-* Scales up the desired capacity on the ASG
-* Ensures the ASG are healthy and that the new nodes have joined the EKS cluster
-* Suspends AWS Autoscaling actions while update is in progress
-* Drains outdated EKS outdated worker nodes one by one
-* Terminates EC2 instances of the worker nodes one by one
-* Detaches EC2 instances from the ASG one by one
-* Scales down the ASG to original count (in case of failure)
-* Resumes AWS Autoscaling actions
+* Scales up the desired capacity for all affected ASGs
+* Ensures the ASGs are healthy and that the new nodes have joined the EKS cluster
+* Cordons the outdated worker nodes for all affected ASGs (Optional)
+* For each ASG in turn:
+    * Suspends AWS Autoscaling actions while update is in progress
+    * Drains outdated EKS outdated worker nodes one by one
+    * Terminates EC2 instances of the worker nodes one by one
+    * Detaches EC2 instances from the ASG one by one
+    * Scales down the ASG to original count (in case of failure)
+    * Resumes AWS Autoscaling actions
 * Resumes Kubernetes Autoscaler (Optional)
 
 <a name="requirements"></a>
@@ -101,7 +102,7 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
-| CORDON_ENABLED            | If True all outdated nodes will be cordoned prior to update                                                        | True                                 |
+| CORDON_ENABLED            | If True all outdated nodes will be cordoned prior to any node draining taking place                                | True                                 |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
 
 <a name="contributing"></a>

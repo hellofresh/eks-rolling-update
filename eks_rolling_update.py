@@ -46,22 +46,8 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node
 def update_asgs(asgs, cluster_name):
     asg_outdated_instance_dict = plan_asgs(asgs)
 
-    # Cordon all the outdated nodes
-    if app_config['CORDON_ENABLED']:
-        k8s_nodes = get_k8s_nodes()
-        for asg_name, asg_tuple in asg_outdated_instance_dict.items():
-            outdated_instances, asg = asg_tuple
-            for outdated in outdated_instances:
-                node_name = ""
-                try:
-                    # get the k8s node name instead of instance id
-                    node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                    cordon_node(node_name)
-                except Exception as e:
-                    logger.error(f"Encountered an error when cordoning node {node_name}")
-                    logger.error(e)
-                    exit(1)
-
+    asg_scale_dict = {}
+    # Scale up all the ASGs with outdated nodes (by the number of outdated nodes)
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
         outdated_instances, asg = asg_tuple
         logger.info('\n')
@@ -97,59 +83,81 @@ def update_asgs(asgs, cluster_name):
         else:
             # dont change the size
             asg_new_max_size = asg_old_max_size
-        # get number of k8s nodes before we scale used later
-        # to determine how many new nodes have been created
-        k8s_nodes = get_k8s_nodes()
+        asg_scale_dict[asg_name] = asg_new_desired_capacity, asg_old_max_size
         # now scale up
         scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
         logger.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
         time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
+
         # check how many instances are running
         asg_instance_count = count_all_cluster_instances(cluster_name)
+
         # check cluster health before doing anything
-        if validate_cluster_health(
+        if not validate_cluster_health(
             asg_name,
             asg_new_desired_capacity,
             asg_instance_count
         ):
-            # pause aws autoscaling so new instances dont try
-            # to spawn while instances are being terminated
-            modify_aws_autoscaling(asg_name, "suspend")
-            # start draining and terminating
+            logger.info('Exiting since asg healthcheck failed')
+            raise Exception('Asg healthcheck failed')
+
+    k8s_nodes = get_k8s_nodes()
+    # Cordon all the outdated nodes
+    if app_config['CORDON_ENABLED']:
+        for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+            outdated_instances, asg = asg_tuple
             for outdated in outdated_instances:
-                # catch any failures so we can resume aws autoscaling
+                node_name = ""
                 try:
                     # get the k8s node name instead of instance id
                     node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                    drain_node(node_name)
-                    delete_node(node_name)
-                    terminate_instance(outdated['InstanceId'])
-                    if not instance_terminated(outdated['InstanceId']):
-                        raise Exception('Instance is failing to terminate. Cancelling out.')
-                    detach_instance(outdated['InstanceId'], asg_name)
-                    if not instance_detached(outdated['InstanceId']):
-                        raise Exception('Instance is failing to detach from ASG. Cancelling out.')
-
-                    between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
-                    if between_nodes_wait != 0:
-                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
-                        time.sleep(between_nodes_wait)
+                    cordon_node(node_name)
                 except Exception as e:
-                    logger.info(e)
-                    raise RollingUpdateException("Rolling update on asg failed", asg_name)
+                    logger.error(f"Encountered an error when cordoning node {node_name}")
+                    logger.error(e)
+                    exit(1)
 
-            # scaling cluster back down
-            logger.info("Scaling asg back down to original state")
-            scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
-            # resume aws autoscaling
-            modify_aws_autoscaling(asg_name, "resume")
-            # remove aws tag
-            delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
-            delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])
-            logger.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
-        else:
-            logger.info('Exiting since asg healthcheck failed')
-            raise Exception('Asg healthcheck failed')
+    # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
+    for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+        # pause aws autoscaling so new instances dont try
+        # to spawn while instances are being terminated
+        modify_aws_autoscaling(asg_name, "suspend")
+        # start draining and terminating
+        outdated_instances, asg = asg_tuple
+        for outdated in outdated_instances:
+            # catch any failures so we can resume aws autoscaling
+            try:
+                # get the k8s node name instead of instance id
+                node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                drain_node(node_name)
+                delete_node(node_name)
+                terminate_instance(outdated['InstanceId'])
+                if not instance_terminated(outdated['InstanceId']):
+                    raise Exception('Instance is failing to terminate. Cancelling out.')
+                detach_instance(outdated['InstanceId'], asg_name)
+                if not instance_detached(outdated['InstanceId']):
+                    raise Exception('Instance is failing to detach from ASG. Cancelling out.')
+
+                between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
+                if between_nodes_wait != 0:
+                    logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                    time.sleep(between_nodes_wait)
+            except Exception as e:
+                logger.info(e)
+                raise RollingUpdateException("Rolling update on asg failed", asg_name)
+
+        # scaling cluster back down
+        logger.info("Scaling asg back down to original state")
+        asg_old_desired_capacity = asg['DesiredCapacity']
+        asg_new_desired_capacity, asg_old_max_size = asg_scale_dict[asg_name]
+        scale_asg(asg_name, asg_new_desired_capacity, asg_old_desired_capacity, asg_old_max_size)
+        # resume aws autoscaling
+        modify_aws_autoscaling(asg_name, "resume")
+        # remove aws tag
+        delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
+        delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])
+        logger.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
+
     logger.info('All asgs processed')
 
 
