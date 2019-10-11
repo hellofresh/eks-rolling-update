@@ -251,6 +251,7 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
             return True
     elif lt_version != int(asg_lt_version):
         logger.info(f"Instance id {instance_id} has a different launch configuration version to the ASG")
+        return True
 
     logger.info("Instance id {} : OK ".format(instance_id))
     return False

@@ -1,0 +1,14 @@
+{
+  "LaunchTemplateId": "string",
+  "LaunchTemplateName": "mock-lt-01",
+  "CreateTime": "2019-03-29 11:21:02.968000+00:00",
+  "CreatedBy": "string",
+  "DefaultVersionNumber": 1,
+  "LatestVersionNumber": 2,
+  "Tags": [
+    {
+      "Key": "string",
+      "Value": "string"
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+    "AutoScalingGroups": [
+        {
+            "AutoScalingGroupName": "mock-asg",
+            "AutoScalingGroupARN": "arn:aws:autoscaling:eu-west-1:000000000000:autoScalingGroup:00000-000-0000-0000-00000000000:autoScalingGroupName/mock-asg",
+            "LaunchTemplate": {
+                "LaunchTemplateName": "mock-lt-01",
+                "Version": "2"
+            },
+            "MinSize": 3,
+            "MaxSize": 6,
+            "DesiredCapacity": 3,
+            "DefaultCooldown": 300,
+            "AvailabilityZones": [
+                "eu-west-1b",
+                "eu-west-1c",
+                "eu-west-1a"
+            ],
+            "LoadBalancerNames": [],
+            "TargetGroupARNs": [],
+            "HealthCheckType": "EC2",
+            "HealthCheckGracePeriod": 300,
+            "Instances": [
+                {
+                    "InstanceId": "i-013eae1c2874fc0d7",
+                    "AvailabilityZone": "eu-west-1b",
+                    "LifecycleState": "InService",
+                    "HealthStatus": "Healthy",
+                    "LaunchTemplate": {
+                        "LaunchTemplateName": "mock-lt-01",
+                        "Version": "2"
+                    },
+                    "ProtectedFromScaleIn": true
+                },
+                {
+                    "InstanceId": "i-014d674859bec5d03",
+                    "AvailabilityZone": "eu-west-1a",
+                    "LifecycleState": "InService",
+                    "HealthStatus": "Healthy",
+                    "LaunchTemplate": {
+                        "LaunchTemplateName": "mock-lt-00",
+                        "Version": "2"
+                    },
+                    "ProtectedFromScaleIn": true
+                },
+                {
+                    "InstanceId": "i-0195398d827ccab16",
+                    "AvailabilityZone": "eu-west-1a",
+                    "LifecycleState": "InService",
+                    "HealthStatus": "Healthy",
+                    "LaunchTemplate": {
+                        "LaunchTemplateName": "mock-lt-01",
+                        "Version": "1"
+                    },
+                    "ProtectedFromScaleIn": true
+                }
+            ],
+            "CreatedTime": "2019-03-29 11:21:02.968000+00:00",
+            "SuspendedProcesses": [
+                {
+                    "ProcessName": "AZRebalance",
+                    "SuspensionReason": "User suspended at 2019-03-29T11:21:41Z"
+                }
+            ],
+            "VPCZoneIdentifier": "subnet-00000001,subnet-00000002,subnet-00000003",
+            "EnabledMetrics": [],
+            "Tags": [
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "Name",
+                    "Value": "mock-eks_asg",
+                    "PropagateAtLaunch": true
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "environment",
+                    "Value": "mock",
+                    "PropagateAtLaunch": true
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "k8s.io/cluster-autoscaler/enabled",
+                    "Value": "true",
+                    "PropagateAtLaunch": false
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "k8s.io/cluster-autoscaler/node-template/resources/ephemeral-storage",
+                    "Value": "100Gi",
+                    "PropagateAtLaunch": false
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "k8s.io/cluster-autoscaler/mock-eks",
+                    "Value": "",
+                    "PropagateAtLaunch": false
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "kubernetes.io/cluster/mock-eks",
+                    "Value": "owned",
+                    "PropagateAtLaunch": true
+                },
+                {
+                    "ResourceId": "mock-asg",
+                    "ResourceType": "auto-scaling-group",
+                    "Key": "owner",
+                    "Value": "eks",
+                    "PropagateAtLaunch": true
+                }
+            ],
+            "TerminationPolicies": [
+                "Default"
+            ],
+            "NewInstancesProtectedFromScaleIn": true,
+            "ServiceLinkedRoleARN": "arn:aws:iam::000000000000:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+        }
+    ],
+    "ResponseMetadata": {
+        "RequestId": "00000000-0000-0000-0000-0000000000000000",
+        "HTTPStatusCode": 200,
+        "HTTPHeaders": {
+            "x-amzn-requestid": "00000000-0000-0000-0000-0000000000000000",
+            "content-type": "text/xml",
+            "content-length": "16707",
+            "vary": "Accept-Encoding",
+            "date": "Tue, 21 May 2019 16:57:33 GMT"
+        },
+        "RetryAttempts": 0
+    }
+}

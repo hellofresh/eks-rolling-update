@@ -4,3 +4,4 @@ venv
 .vscode
 .env
 .coverage
+.idea
