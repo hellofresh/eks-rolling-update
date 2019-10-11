@@ -119,11 +119,15 @@ def update_asgs(asgs, cluster_name):
 
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+        outdated_instances, asg = asg_tuple
+        # skip to next asg if there are no outdated instances
+        if len(outdated_instances) == 0:
+            continue
         # pause aws autoscaling so new instances dont try
         # to spawn while instances are being terminated
         modify_aws_autoscaling(asg_name, "suspend")
         # start draining and terminating
-        outdated_instances, asg = asg_tuple
+
         for outdated in outdated_instances:
             # catch any failures so we can resume aws autoscaling
             try:
