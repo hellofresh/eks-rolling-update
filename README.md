@@ -27,16 +27,15 @@ To achieve this, it performs the following actions:
 
 * Pauses Kubernetes Autoscaler (Optional)
 * Finds a list of worker nodes that do not have a launch config or template that matches their ASG
-* Scales up the desired capacity for all affected ASGs
+* Scales up the desired capacity
 * Ensures the ASGs are healthy and that the new nodes have joined the EKS cluster
-* Cordons the outdated worker nodes for all affected ASGs (Optional)
-* For each ASG in turn:
-    * Suspends AWS Autoscaling actions while update is in progress
-    * Drains outdated EKS outdated worker nodes one by one
-    * Terminates EC2 instances of the worker nodes one by one
-    * Detaches EC2 instances from the ASG one by one
-    * Scales down the ASG to original count (in case of failure)
-    * Resumes AWS Autoscaling actions
+* Cordons the outdated worker nodes
+* Suspends AWS Autoscaling actions while update is in progress
+* Drains outdated EKS outdated worker nodes one by one
+* Terminates EC2 instances of the worker nodes one by one
+* Detaches EC2 instances from the ASG one by one
+* Scales down the ASG to original count (in case of failure)
+* Resumes AWS Autoscaling actions
 * Resumes Kubernetes Autoscaler (Optional)
 
 <a name="requirements"></a>
@@ -103,8 +102,24 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
-| CORDON_MODE               | See CORDON_MODE section below                                                                                      | 2                                    |
+| RUN_MODE                  | See Run Modes section below                                                                                        | 2                                    |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
+
+## Run Modes
+There are a number of different values which can be set for the `RUN_MODE` environment variable. 
+
+`1` is the default.
+
+| Mode Number   | Description                                                                                     |
+|---------------|-------------------------------------------------------------------------------------------------|
+| 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.       |
+| 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.     |
+| 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.|
+
+Each of them have different advantages and disadvantages.
+* Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
+* Only cordoning the nodes on a per-ASG basis will mean that pods are likely to be moved more than once
+* Cordoning the nodes for all ASGs at once could cause issues if new pods needs to start during the process
 
 <a name="contributing"></a>
 ## Contributing

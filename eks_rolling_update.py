@@ -118,23 +118,23 @@ def scale_up_asg(cluster_name, asg, count):
 
 
 def update_asgs(asgs, cluster_name):
-    cordon_mode = int(app_config['CORDON_MODE'])
+    run_mode = int(app_config['run_mode'])
 
     asg_outdated_instance_dict = plan_asgs(asgs)
 
     asg_original_state_dict = {}
 
-    if cordon_mode == 1:
+    if run_mode == 2:
         # Scale up all the ASGs with outdated nodes (by the number of outdated nodes)
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
             outdated_instance_count = len(outdated_instances)
             logger.info(
-                f'Setting the scale of ASG {asg_name} based on number of outdated instances ({outdated_instance_count}).')
+                f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
     k8s_nodes = get_k8s_nodes()
-    if (cordon_mode == 1) or (cordon_mode == 3):
+    if (run_mode == 2) or (run_mode == 3):
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
             for outdated in outdated_instances:
@@ -153,12 +153,12 @@ def update_asgs(asgs, cluster_name):
         outdated_instances, asg = asg_tuple
         outdated_instance_count = len(outdated_instances)
 
-        if (cordon_mode == 2) or (cordon_mode == 3):
+        if (run_mode == 1) or (run_mode == 3):
             logger.info(
-                f'Setting the scale of ASG {asg_name} based on number of outdated instances ({outdated_instance_count}).')
+                f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
-        if cordon_mode == 2:
+        if run_mode == 1:
             for outdated in outdated_instances:
                 node_name = ""
                 try:
