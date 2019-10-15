@@ -43,76 +43,86 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node
     return cluster_healthy
 
 
-def update_asgs(asgs, cluster_name):
-    asg_outdated_instance_dict = plan_asgs(asgs)
+def scale_up_asg(cluster_name, asg, count):
+    asg_old_max_size = asg['MaxSize']
+    asg_old_desired_capacity = asg['DesiredCapacity']
+    desired_capacity = asg_old_desired_capacity + count
+    asg_tags = asg['Tags']
+    asg_name = asg['AutoScalingGroupName']
 
-    asg_scale_dict = {}
-    # Scale up all the ASGs with outdated nodes (by the number of outdated nodes)
-    for asg_name, asg_tuple in asg_outdated_instance_dict.items():
-        outdated_instances, asg = asg_tuple
-        logger.info('\n')
-        logger.info('****  Starting rolling update for autoscaling group {}  ****'.format(asg_name))
-        asg_old_max_size = asg['MaxSize']
-        asg_old_desired_capacity = asg['DesiredCapacity']
-        asg_tags = asg['Tags']
+    # remove any stale suspensions from asg that may be present
+    modify_aws_autoscaling(asg_name, "resume")
 
-        # remove any stale suspensions from asg that may be present
-        modify_aws_autoscaling(asg_name, "resume")
+    asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
+    asg_tag_orig_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
+    asg_tag_orig_max_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_MAX_CAPACITY_TAG"])
 
-        asg_scale_dict[asg_name] = {'new': asg_old_desired_capacity, 'old': asg_old_desired_capacity,
-                                    'max': asg_old_max_size}
+    if desired_capacity == asg_old_desired_capacity:
+        logger.info(f'Desired and current capacity for {asg_name} are equal. Skipping ASG.')
 
-        # skip to next asg if there are no outdated instances
-        if len(outdated_instances) == 0:
-            continue
-
-        # check for previous run tag on asg
-        asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
         if asg_tag_desired_capacity.get('Value'):
-            logger.info('Found previous desired capacity value tag set on asg from a previous run. Value: {}'.format(asg_tag_desired_capacity.get('Value')))
-            logger.info('Maintaining previous capacity to not overscale')
-            asg_new_desired_capacity = int(asg_tag_desired_capacity.get('Value'))
-            asg_tag_original_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
-            logger.info('Maintaining original old capacity from a previous run so we can scale back down to original size of: {}'.format(asg_tag_original_capacity.get('Value')))
-            asg_old_desired_capacity = int(asg_tag_original_capacity.get('Value'))
+            logger.info('Found capacity tags on ASG from previous run. Leaving alone.')
+            return asg_tag_desired_capacity.get('Value'), asg_tag_orig_capacity.get(
+                'Value'), asg_tag_orig_max_capacity.get('Value')
         else:
-            logger.info('No previous capacity value tag set on asg')
-            # save original capacity to asg tags
-            logger.info('Setting original capacity on asg')
             save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
-            asg_new_desired_capacity = asg_old_desired_capacity + len(outdated_instances)
-            # save new capacity to asg tags
-            save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], asg_new_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], asg_old_desired_capacity)
+            save_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"], asg_old_max_size)
+            return asg_old_desired_capacity, asg_old_desired_capacity, asg_old_max_size
+
+    # only scale up if no previous desired capacity tag set
+    if asg_tag_desired_capacity.get('Value'):
+        logger.info('Found previous desired capacity value tag set on asg from a previous run.')
+        logger.info(f'Maintaining previous capacity of {asg_old_desired_capacity} to not overscale.')
+        return asg_tag_desired_capacity.get('Value'), asg_tag_orig_capacity.get(
+            'Value'), asg_tag_orig_max_capacity.get('Value')
+    else:
+        logger.info('No previous capacity value tags set on ASG; setting tags.')
+        save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
+        save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_capacity)
+        save_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"], asg_old_max_size)
+
         # only change the max size if the new capacity is bigger than current max
-        if asg_new_desired_capacity > asg_old_max_size:
-            asg_new_max_size = asg_new_desired_capacity
+        if desired_capacity > asg_old_max_size:
+            scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, desired_capacity)
         else:
-            # dont change the size
-            asg_new_max_size = asg_old_max_size
+            scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, asg_old_max_size)
 
-        asg_scale_dict[asg_name] = {'new': asg_new_desired_capacity, 'old': asg_old_desired_capacity,
-                                    'max': asg_old_max_size}
-
-        # now scale up
-        scale_asg(asg_name, asg_old_desired_capacity, asg_new_desired_capacity, asg_new_max_size)
-        logger.info('Waiting for {} seconds for asg {} to scale before validating cluster health...'.format(app_config['CLUSTER_HEALTH_WAIT'], asg_name))
-        time.sleep(app_config['CLUSTER_HEALTH_WAIT'])
-
-        # check how many instances are running
+        cluster_health_wait = app_config['CLUSTER_HEALTH_WAIT']
+        logger.info(f'Waiting for {cluster_health_wait} seconds for ASG to scale before validating cluster health...')
+        time.sleep(cluster_health_wait)
         asg_instance_count = count_all_cluster_instances(cluster_name)
 
         # check cluster health before doing anything
         if not validate_cluster_health(
             asg_name,
-            asg_new_desired_capacity,
+            desired_capacity,
             asg_instance_count
         ):
-            logger.info('Exiting since asg healthcheck failed')
-            raise Exception('Asg healthcheck failed')
+            logger.info('Exiting since ASG healthcheck failed')
+            raise Exception('ASG healthcheck failed')
 
-    k8s_nodes = get_k8s_nodes()
-    # Cordon all the outdated nodes
-    if app_config['CORDON_ENABLED']:
+        return desired_capacity, asg_old_desired_capacity, asg_old_max_size
+
+
+def update_asgs(asgs, cluster_name):
+    cordon_mode = app_config['CORDON_MODE']
+
+    asg_outdated_instance_dict = plan_asgs(asgs)
+
+    asg_original_state_dict = {}
+
+    if cordon_mode == 1:
+        # Scale up all the ASGs with outdated nodes (by the number of outdated nodes)
+        for asg_name, asg_tuple in asg_outdated_instance_dict.items():
+            outdated_instances, asg = asg_tuple
+            outdated_instance_count = len(outdated_instances)
+            logger.info(
+                f'Setting the scale of ASG {asg_name} based on number of outdated instances ({outdated_instance_count}).')
+            asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
+
+    if (cordon_mode == 1) or (cordon_mode == 3):
+        k8s_nodes = get_k8s_nodes()
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
             for outdated in outdated_instances:
@@ -121,22 +131,39 @@ def update_asgs(asgs, cluster_name):
                     # get the k8s node name instead of instance id
                     node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                     cordon_node(node_name)
-                except Exception as e:
+                except Exception as cordon_exception:
                     logger.error(f"Encountered an error when cordoning node {node_name}")
-                    logger.error(e)
+                    logger.error(cordon_exception)
                     exit(1)
 
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
         outdated_instances, asg = asg_tuple
-        # skip to next asg if there are no outdated instances
-        if len(outdated_instances) == 0:
-            continue
-        # pause aws autoscaling so new instances dont try
-        # to spawn while instances are being terminated
-        modify_aws_autoscaling(asg_name, "suspend")
-        # start draining and terminating
+        outdated_instance_count = len(outdated_instances)
 
+        if (cordon_mode == 2) or (cordon_mode == 3):
+            logger.info(
+                f'Setting the scale of ASG {asg_name} based on number of outdated instances ({outdated_instance_count}).')
+            asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
+
+        if cordon_mode == 2:
+            for outdated in outdated_instances:
+                node_name = ""
+                try:
+                    # get the k8s node name instead of instance id
+                    node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                    cordon_node(node_name)
+                except Exception as cordon_exception:
+                    logger.error(f"Encountered an error when cordoning node {node_name}")
+                    logger.error(cordon_exception)
+                    exit(1)
+
+        if len(outdated_instances) != 0:
+            # pause aws autoscaling so new instances dont try
+            # to spawn while instances are being terminated
+            modify_aws_autoscaling(asg_name, "suspend")
+
+        # start draining and terminating
         for outdated in outdated_instances:
             # catch any failures so we can resume aws autoscaling
             try:
@@ -155,20 +182,21 @@ def update_asgs(asgs, cluster_name):
                 if between_nodes_wait != 0:
                     logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                     time.sleep(between_nodes_wait)
-            except Exception as e:
-                logger.info(e)
-                raise RollingUpdateException("Rolling update on asg failed", asg_name)
+            except Exception as drain_exception:
+                logger.info(drain_exception)
+                raise RollingUpdateException("Rolling update on ASG failed", asg_name)
 
         # scaling cluster back down
         logger.info("Scaling asg back down to original state")
-        scale_asg(asg_name, asg_scale_dict['new'], asg_scale_dict['old'], asg_scale_dict['max'])
+        asg_desired_capacity, asg_orig_desired_capacity, asg_orig_max_capacity = asg_original_state_dict[asg_name]
+        scale_asg(asg_name, asg_desired_capacity, asg_orig_desired_capacity, asg_orig_max_capacity)
         # resume aws autoscaling
         modify_aws_autoscaling(asg_name, "resume")
         # remove aws tag
         delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
         delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])
-        logger.info('*** Rolling update of asg {} is complete! ***'.format(asg_name))
-
+        delete_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"])
+        logger.info(f'*** Rolling update of asg {asg_name} is complete! ***')
     logger.info('All asgs processed')
 
 

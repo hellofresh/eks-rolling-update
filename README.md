@@ -98,11 +98,12 @@ eks-rolling-update.py -c my-eks-cluster
 | K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                           | ""                                   |
 | ASG_DESIRED_STATE_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:desired_capacity  |
 | ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:original_capacity |
+| ASG_ORIG_MAX_CAPACITY_TAG | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:original_max_capacity |
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                       | 90                                   |
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
-| CORDON_ENABLED            | If True all outdated nodes will be cordoned prior to any node draining taking place                                | True                                 |
+| CORDON_MODE               | See CORDON_MODE section below                                                                                      | 2                                    |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
 
 <a name="contributing"></a>
