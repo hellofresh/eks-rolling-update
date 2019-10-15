@@ -37,9 +37,7 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node
                 'Validation failed for asg {}.'
                 'Instances not healthy'.format(asg_name))
     else:
-        logger.info(
-            'Validation failed for asg {}.'
-            'Not enough instances online'.format(asg_name))
+        logger.info('Validation failed for asg {}. Not enough instances online.'.format(asg_name))
     return cluster_healthy
 
 
@@ -80,7 +78,7 @@ def scale_up_asg(cluster_name, asg, count):
         # check cluster health before doing anything
         if not validate_cluster_health(
             asg_name,
-            desired_capacity,
+            int(asg_tag_desired_capacity.get('Value')),
             asg_instance_count
         ):
             logger.info('Exiting since ASG healthcheck failed')
