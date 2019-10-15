@@ -62,8 +62,8 @@ def scale_up_asg(cluster_name, asg, count):
 
         if asg_tag_desired_capacity.get('Value'):
             logger.info('Found capacity tags on ASG from previous run. Leaving alone.')
-            return asg_tag_desired_capacity.get('Value'), asg_tag_orig_capacity.get(
-                'Value'), asg_tag_orig_max_capacity.get('Value')
+            return int(asg_tag_desired_capacity.get('Value')), int(asg_tag_orig_capacity.get(
+                'Value')), int(asg_tag_orig_max_capacity.get('Value'))
         else:
             save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
             save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], asg_old_desired_capacity)
@@ -74,8 +74,20 @@ def scale_up_asg(cluster_name, asg, count):
     if asg_tag_desired_capacity.get('Value'):
         logger.info('Found previous desired capacity value tag set on asg from a previous run.')
         logger.info(f'Maintaining previous capacity of {asg_old_desired_capacity} to not overscale.')
-        return asg_tag_desired_capacity.get('Value'), asg_tag_orig_capacity.get(
-            'Value'), asg_tag_orig_max_capacity.get('Value')
+
+        asg_instance_count = count_all_cluster_instances(cluster_name)
+
+        # check cluster health before doing anything
+        if not validate_cluster_health(
+            asg_name,
+            desired_capacity,
+            asg_instance_count
+        ):
+            logger.info('Exiting since ASG healthcheck failed')
+            raise Exception('ASG healthcheck failed')
+
+        return int(asg_tag_desired_capacity.get('Value')), int(asg_tag_orig_capacity.get(
+            'Value')), int(asg_tag_orig_max_capacity.get('Value'))
     else:
         logger.info('No previous capacity value tags set on ASG; setting tags.')
         save_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"], asg_old_desired_capacity)
@@ -88,7 +100,7 @@ def scale_up_asg(cluster_name, asg, count):
         else:
             scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, asg_old_max_size)
 
-        cluster_health_wait = app_config['CLUSTER_HEALTH_WAIT']
+        cluster_health_wait = int(app_config['CLUSTER_HEALTH_WAIT'])
         logger.info(f'Waiting for {cluster_health_wait} seconds for ASG to scale before validating cluster health...')
         time.sleep(cluster_health_wait)
         asg_instance_count = count_all_cluster_instances(cluster_name)
@@ -106,7 +118,7 @@ def scale_up_asg(cluster_name, asg, count):
 
 
 def update_asgs(asgs, cluster_name):
-    cordon_mode = app_config['CORDON_MODE']
+    cordon_mode = int(app_config['CORDON_MODE'])
 
     asg_outdated_instance_dict = plan_asgs(asgs)
 
@@ -121,8 +133,8 @@ def update_asgs(asgs, cluster_name):
                 f'Setting the scale of ASG {asg_name} based on number of outdated instances ({outdated_instance_count}).')
             asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
+    k8s_nodes = get_k8s_nodes()
     if (cordon_mode == 1) or (cordon_mode == 3):
-        k8s_nodes = get_k8s_nodes()
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
             for outdated in outdated_instances:
