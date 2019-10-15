@@ -118,7 +118,7 @@ def scale_up_asg(cluster_name, asg, count):
 
 
 def update_asgs(asgs, cluster_name):
-    run_mode = int(app_config['run_mode'])
+    run_mode = int(app_config['RUN_MODE'])
 
     asg_outdated_instance_dict = plan_asgs(asgs)
 
