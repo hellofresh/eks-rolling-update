@@ -307,7 +307,7 @@ def plan_asgs(asgs):
             asg_lt_version = asg['MixedInstancesPolicy']['LaunchTemplate']['LaunchTemplateSpecification'][
                 'Version']
         else:
-            logger.error(f"Auto Scaling Group {asg_name} doesn't have LaunchConfigurationName or MixedInstancesPolicy")
+            logger.error(f"Auto Scaling Group {asg_name} doesn't have LaunchConfigurationName or LaunchTemplate")
 
         instances = asg['Instances']
         # return a list of outdated instances
