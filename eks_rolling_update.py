@@ -11,7 +11,7 @@ from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_
 from lib.exceptions import RollingUpdateException
 
 
-def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count):
+def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
     cluster_healthy = False
     # check if asg has enough nodes first before checking instance health
     if is_asg_scaled(asg_name, new_desired_asg_capacity):
@@ -183,7 +183,8 @@ if __name__ == "__main__":
         try:
             update_asgs(filtered_asgs, args.cluster_name)
             # resume autoscaler after asg updated
-            modify_k8s_autoscaler("resume")
+            if app_config['K8S_AUTOSCALER_ENABLED'] is True:
+                modify_k8s_autoscaler("resume")
             logger.info('*** Rolling update of all asg is complete! ***')
         except RollingUpdateException as e:
             logger.info("Rolling update encountered an exception. Resuming aws autoscaling.")

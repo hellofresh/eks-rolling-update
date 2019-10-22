@@ -11,5 +11,6 @@ app_config = {
     'CLUSTER_HEALTH_WAIT': os.getenv('CLUSTER_HEALTH_WAIT', 90),
     'GLOBAL_MAX_RETRY': os.getenv('GLOBAL_MAX_RETRY', 12),
     'GLOBAL_HEALTH_WAIT': os.getenv('GLOBAL_HEALTH_WAIT', 20),
-    'DRY_RUN': os.getenv('DRY_RUN', False)
+    'DRY_RUN': os.getenv('DRY_RUN', False),
+    'EXCLUDE_NODE_LABEL_KEY': 'spotinst.io/node-lifecycle'
 }
