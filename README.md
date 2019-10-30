@@ -91,9 +91,9 @@ eks-rolling-update.py -c my-eks-cluster
 
 | Parameter                 | Description                                                                                                        | Default                              |
 |---------------------------|--------------------------------------------------------------------------------------------------------------------|--------------------------------------|
-| K8S_AUTOSCALER_ENABLED    | If True Kubernetes Autoscaler will be paused before running update                                                 | True                                 |
-| K8S_AUTOSCALER_NAMESPACE  | Namespace where Kubernetes Autoscaler is deployed                                                                  | ""                                   |
-| K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                           | ""                                   |
+| K8S_AUTOSCALER_ENABLED    | If True Kubernetes Autoscaler will be paused before running update                                                 | False                                 |
+| K8S_AUTOSCALER_NAMESPACE  | Namespace where Kubernetes Autoscaler is deployed                                                                  | "default"                                   |
+| K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                           | "cluster-autoscaler"                                   |
 | ASG_DESIRED_STATE_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:desired_capacity  |
 | ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:original_capacity |
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                       | 90                                   |
@@ -101,6 +101,51 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
 
+## Examples
+  - enable the updater to operate on `cluster-autoscaler`
+    ```
+    #
+    # set your AWS environment before running eks rolling update
+    #
+
+    # NOTE: This examople will only work if you have cluster-autoscaler operating inside your cluster!
+    # Let the updater know that cluster-autoscaler is running in your cluster
+
+    $ export  K8S_AUTOSCALER_ENABLED=1 \
+              K8S_AUTOSCALER_NAMESPACE="CA_NAMESPACE" \
+              K8S_AUTOSCALER_DEPLOYMENT="CA_DEPLOYMENT_NAME"
+
+    # plan
+    $ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME --plan
+    ...
+
+    # apply changes
+    $ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
+    ```
+- disable operations on `cluster-autoscaler`
+  ```
+    $ unset K8S_AUTOSCALER_ENABLED
+  ```
+- enable features only for one run
+  ```
+    # DRY_RUN will only be used by the current updater session
+    $ DRY_RUN=1 python eks_rolling_update.py --cluster_name YOUR_CLUSTER_NAME
+
+    # operate on cluster-autoscaler only for this updater session
+    $ K8S_AUTOSCALER_ENABLED=1 \
+      K8S_AUTOSCALER_NAMESPACE="somenamespace" \
+      K8S_AUTOSCALER_DEPLOYMENT="deploymentname" \
+      python eks_rolling_update.py --cluster_name YOUR_CLUSTER_NAME
+  ```
+- `.env` file
+  ```
+  # you can use .env file within your project directory to load updater settings
+  # e.g:
+  
+  $ cat .env
+  DRY_RUN=1
+  $
+  ```
 <a name="contributing"></a>
 ## Contributing
 
