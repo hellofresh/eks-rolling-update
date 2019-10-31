@@ -183,7 +183,8 @@ if __name__ == "__main__":
         try:
             update_asgs(filtered_asgs, args.cluster_name)
             # resume autoscaler after asg updated
-            modify_k8s_autoscaler("resume")
+            if app_config['K8S_AUTOSCALER_ENABLED'] is True:
+                modify_k8s_autoscaler("resume")
             logger.info('*** Rolling update of all asg is complete! ***')
         except RollingUpdateException as e:
             logger.info("Rolling update encountered an exception. Resuming aws autoscaling.")
