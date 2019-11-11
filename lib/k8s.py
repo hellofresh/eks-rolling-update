@@ -28,7 +28,7 @@ def get_node_by_instance_id(k8s_nodes, instance_id):
     logger.info('Searching for k8s node name by instance id...')
     for k8s_node in k8s_nodes:
         if instance_id in k8s_node.spec.provider_id:
-            logger.info('InstanceId {} is node {} in kuberentes land'.format(instance_id, k8s_node.metadata.name))
+            logger.info('InstanceId {} is node {} in kubernetes land'.format(instance_id, k8s_node.metadata.name))
             node_name = k8s_node.metadata.name
     if not node_name:
         logger.info("Could not find a k8s node name for that instance id. Exiting")
@@ -42,7 +42,6 @@ def modify_k8s_autoscaler(action):
     """
     import kubernetes.client
     config.load_kube_config()
-    k8s_api = client.CoreV1Api()
     # Configure API key authorization: BearerToken
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
@@ -74,7 +73,6 @@ def delete_node(node_name):
     """
     import kubernetes.client
     config.load_kube_config()
-    k8s_api = client.CoreV1Api()
     configuration = kubernetes.client.Configuration()
     # create an instance of the API class
     k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
@@ -87,6 +85,27 @@ def delete_node(node_name):
         logger.info("Node deleted")
     except ApiException as e:
         logger.info("Exception when calling CoreV1Api->delete_node: {}".format(e))
+
+
+def cordon_node(node_name):
+    """
+    Cordon a kubernetes node to avoid new pods being scheduled on it
+    """
+    import kubernetes.client
+    config.load_kube_config()
+    configuration = kubernetes.client.Configuration()
+    # create an instance of the API class
+    k8s_api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
+    logger.info("Cordoning k8s node {}...".format(node_name))
+    try:
+        api_call_body = client.V1Node(spec=client.V1NodeSpec(unschedulable=True))
+        if not app_config['DRY_RUN']:
+            k8s_api.patch_node(node_name, api_call_body)
+        else:
+            k8s_api.patch_node(node_name, api_call_body, dry_run=True)
+        logger.info("Node cordoned")
+    except ApiException as e:
+        logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
 
 
 def drain_node(node_name):
@@ -122,6 +141,7 @@ def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['G
     """
     logger.info('Checking k8s nodes health status...')
     retry_count = 1
+    healthy_nodes = False
     while retry_count < max_retry:
         # reset healthy nodes after every loop
         healthy_nodes = True
@@ -153,6 +173,7 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     """
     logger.info('Checking k8s expected nodes are online after asg scaled up...')
     retry_count = 1
+    nodes_online = False
     while retry_count < max_retry:
         nodes_online = True
         retry_count += 1

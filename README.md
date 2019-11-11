@@ -6,7 +6,7 @@
 
 [![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
 
-> EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster.
+> EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster.
 
 
 - [Intro](#intro)
@@ -21,14 +21,15 @@
 <a name="intro"></a>
 # Intro
 
-EKS Rolling Update is a utility for updating the launch configuration of worker nodes in an EKS cluster. It
+EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster. It
 updates worker nodes in a rolling fashion and performs health checks of your EKS cluster to ensure no disruption to service.
 To achieve this, it performs the following actions:
 
 * Pauses Kubernetes Autoscaler (Optional)
-* Finds a list of worker nodes per ASG that do not have a launch config that matches the ASG
-* Scales up the desired capacity on the ASG
-* Ensures the ASG are healthy and that the new nodes have joined the EKS cluster
+* Finds a list of worker nodes that do not have a launch config or template that matches their ASG
+* Scales up the desired capacity
+* Ensures the ASGs are healthy and that the new nodes have joined the EKS cluster
+* Cordons the outdated worker nodes
 * Suspends AWS Autoscaling actions while update is in progress
 * Drains outdated EKS outdated worker nodes one by one
 * Terminates EC2 instances of the worker nodes one by one
@@ -96,10 +97,29 @@ eks-rolling-update.py -c my-eks-cluster
 | K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                           | ""                                   |
 | ASG_DESIRED_STATE_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:desired_capacity  |
 | ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:original_capacity |
+| ASG_ORIG_MAX_CAPACITY_TAG | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                 | eks-rolling-update:original_max_capacity |
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                       | 90                                   |
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                               | 12                                   |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                           | 20                                   |
+| BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                               | 0                                    |
+| RUN_MODE                  | See Run Modes section below                                                                                        | 2                                    |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation | False                                |
+
+## Run Modes
+There are a number of different values which can be set for the `RUN_MODE` environment variable. 
+
+`1` is the default.
+
+| Mode Number   | Description                                                                                     |
+|---------------|-------------------------------------------------------------------------------------------------|
+| 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.       |
+| 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.     |
+| 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.|
+
+Each of them have different advantages and disadvantages.
+* Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
+* Only cordoning the nodes on a per-ASG basis will mean that pods are likely to be moved more than once
+* Cordoning the nodes for all ASGs at once could cause issues if new pods needs to start during the process
 
 <a name="contributing"></a>
 ## Contributing

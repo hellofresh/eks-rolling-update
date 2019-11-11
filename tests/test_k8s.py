@@ -1,10 +1,8 @@
 import os
 import unittest
 import json
-from moto import mock_autoscaling
-from lib.k8s import get_k8s_nodes, k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id
-from unittest.mock import Mock, patch
-from mock import mock
+from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id
+from unittest.mock import patch
 from box import Box
 
 
