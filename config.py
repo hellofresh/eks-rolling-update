@@ -3,9 +3,9 @@ import os
 load_dotenv()
 
 app_config = {
-    'K8S_AUTOSCALER_ENABLED': os.getenv('K8S_AUTOSCALER_ENABLED', True),
-    'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE'),
-    'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT'),
+    'K8S_AUTOSCALER_ENABLED': os.getenv('K8S_AUTOSCALER_ENABLED', False),
+    'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE','default'),
+    'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT','cluster-autoscaler'),
     'ASG_DESIRED_STATE_TAG': 'eks-rolling-update:desired_capacity',
     'ASG_ORIG_CAPACITY_TAG': 'eks-rolling-update:original_capacity',
     'ASG_ORIG_MAX_CAPACITY_TAG': 'eks-rolling-update:original_max_capacity',

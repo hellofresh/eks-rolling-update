@@ -116,7 +116,7 @@ def modify_aws_autoscaling(asg_name, action):
         asg_name,
         action)
     )
-    if app_config['DRY_RUN'] is not True:
+    if not app_config['DRY_RUN']:
 
         if action == "suspend":
             response = client.suspend_processes(
@@ -145,7 +145,7 @@ def scale_asg(asg_name, current_desired_capacity, new_desired_capacity, new_max_
     Changes the desired capacity of an asg
     """
     logger.info('Setting asg desired capacity from {} to {} and max size to {}...'.format(current_desired_capacity, new_desired_capacity, new_max_size))
-    if app_config['DRY_RUN'] is not True:
+    if not app_config['DRY_RUN']:
         response = client.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             DesiredCapacity=new_desired_capacity,
@@ -162,7 +162,7 @@ def save_asg_tags(asg_name, key, value):
     Adds a tag to asg for later retrieval
     """
     logger.info('Saving tag to asg key: {}, value : {}...'.format(key, value))
-    if app_config['DRY_RUN'] is not True:
+    if not app_config['DRY_RUN']:
         response = client.create_or_update_tags(
             Tags=[
                 {
@@ -188,7 +188,7 @@ def delete_asg_tags(asg_name, key):
     Deletes a tag from asg
     """
     logger.info('Deleting tag from asg key: {}...'.format(key))
-    if app_config['DRY_RUN'] is not True:
+    if not app_config['DRY_RUN']:
         response = client.delete_tags(
             Tags=[
                 {
