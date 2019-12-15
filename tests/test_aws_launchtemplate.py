@@ -26,54 +26,54 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertFalse(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '2'))
+            self.assertFalse(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '2'))
 
     def test_is_instance_outdated_fail_name(self):
         response = self.aws_response_mock
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertTrue(instance_outdated_launchtemplate(instances[1], 'mock-lt-01', '2'))
+            self.assertTrue(instance_outdated_launchtemplate(instances[1], 'mock-lt-01', '2'))
 
     def test_is_instance_outdated_fail_version_number(self):
         response = self.aws_response_mock
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '2'))
+            self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '2'))
 
     def test_is_instance_outdated_fail_version_default(self):
         response = self.aws_response_mock_default
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        with patch('lib.aws.get_launch_template') as get_launch_template_mock:
-            get_launch_template_mock.return_value = self.mock_get_launch_template
-            self.assertTrue(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Default'))
+            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+                get_launch_template_mock.return_value = self.mock_get_launch_template
+                self.assertTrue(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Default'))
 
     def test_is_instance_outdated_pass_version_default(self):
         response = self.aws_response_mock_default
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        with patch('lib.aws.get_launch_template') as get_launch_template_mock:
-            get_launch_template_mock.return_value = self.mock_get_launch_template
-            self.assertFalse(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Default'))
+            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+                get_launch_template_mock.return_value = self.mock_get_launch_template
+                self.assertFalse(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Default'))
 
     def test_is_instance_outdated_pass_version_latest(self):
         response = self.aws_response_mock_latest
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        with patch('lib.aws.get_launch_template') as get_launch_template_mock:
-            get_launch_template_mock.return_value = self.mock_get_launch_template
-            self.assertFalse(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Latest'))
+            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+                get_launch_template_mock.return_value = self.mock_get_launch_template
+                self.assertFalse(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Latest'))
 
     def test_is_instance_outdated_fail_version_latest(self):
         response = self.aws_response_mock_latest
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-        with patch('lib.aws.get_launch_template') as get_launch_template_mock:
-            get_launch_template_mock.return_value = self.mock_get_launch_template
-            self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Latest'))
+            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+                get_launch_template_mock.return_value = self.mock_get_launch_template
+                self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Latest'))
