@@ -12,7 +12,7 @@ from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_
 from lib.exceptions import RollingUpdateException
 
 
-def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count):
+def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
     cluster_healthy = False
     # check if asg has enough nodes first before checking instance health
     if is_asg_scaled(asg_name, new_desired_asg_capacity):

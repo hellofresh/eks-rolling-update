@@ -14,5 +14,6 @@ app_config = {
     'GLOBAL_HEALTH_WAIT': int(os.getenv('GLOBAL_HEALTH_WAIT', 20)),
     'BETWEEN_NODES_WAIT': int(os.getenv('BETWEEN_NODES_WAIT', 0)),
     'RUN_MODE': int(os.getenv('RUN_MODE', 1)),
-    'DRY_RUN': bool(os.getenv('DRY_RUN', False))
+    'DRY_RUN': bool(os.getenv('DRY_RUN', False)),
+    'EXCLUDE_NODE_LABEL_KEY': 'spotinst.io/node-lifecycle'
 }
