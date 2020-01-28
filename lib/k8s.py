@@ -120,22 +120,19 @@ def drain_node(node_name):
     because the draining functionality is done client side and to
     replicate the same functionality here would be too time consuming
     """
-    logger.info('Draining worker node {}...'.format(node_name))
+    kubectl_args = [
+        'kubectl', 'drain', node_name,
+        '--ignore-daemonsets',
+        '--delete-local-data'
+    ]
+    kubectl_args += app_config['EXTRA_DRAIN_ARGS']
+
     if app_config['DRY_RUN'] is True:
-        result = subprocess.run([
-            'kubectl', 'drain', node_name,
-            '--ignore-daemonsets',
-            '--delete-local-data',
-            '--dry-run'
-        ]
-        )
-    else:
-        result = subprocess.run([
-            'kubectl', 'drain', node_name,
-            '--ignore-daemonsets',
-            '--delete-local-data'
-        ]
-        )
+        kubectl_args += ['--dry-run']
+
+    logger.info('Draining worker node with {}...'.format(' '.join(kubectl_args)))
+    result = subprocess.run(kubectl_args)
+
     # If returncode is non-zero, raise a CalledProcessError.
     if result.returncode != 0:
         raise Exception("Node not drained properly. Exiting")
