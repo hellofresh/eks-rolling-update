@@ -57,7 +57,7 @@ def modify_k8s_autoscaler(action):
         body = {'spec': {'replicas': 0}}
     elif action == 'resume':
         logger.info('Resuming k8s autoscaler...')
-        body = {'spec': {'replicas': 2}}
+        body = {'spec': {'replicas': app_config['K8S_AUTOSCALER_REPLICAS']}}
     else:
         logger.info('Invalid k8s autoscaler option')
         sys.exit(1)

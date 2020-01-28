@@ -95,6 +95,7 @@ eks-rolling-update.py -c my-eks-cluster
 | K8S_AUTOSCALER_ENABLED    | If True Kubernetes Autoscaler will be paused before running update                                                    | False                                    |
 | K8S_AUTOSCALER_NAMESPACE  | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
 | K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                              | "cluster-autoscaler"                     |
+| K8S_AUTOSCALER_REPLICAS   | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                            | 2                                        |
 | ASG_DESIRED_STATE_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:desired_capacity      |
 | ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
 | ASG_ORIG_MAX_CAPACITY_TAG | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
@@ -107,7 +108,7 @@ eks-rolling-update.py -c my-eks-cluster
 | EXTRA_DRAIN_ARGS          | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
 
 ## Run Modes
-There are a number of different values which can be set for the `RUN_MODE` environment variable. 
+There are a number of different values which can be set for the `RUN_MODE` environment variable.
 
 `1` is the default.
 
@@ -162,7 +163,7 @@ Each of them have different advantages and disadvantages.
   ```
   # you can use .env file within your project directory to load updater settings
   # e.g:
-  
+
   $ cat .env
   DRY_RUN=1
   $
@@ -171,7 +172,7 @@ Each of them have different advantages and disadvantages.
 <a name="docker"></a>
 ## Docker
 
-Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image. `docker build -t eks-rolling-update:latest .` 
+Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image. `docker build -t eks-rolling-update:latest .`
 
 After building the image, run using the command
 ```bash
