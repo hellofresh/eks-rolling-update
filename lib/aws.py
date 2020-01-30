@@ -45,7 +45,7 @@ def terminate_instance_in_asg(instance_id):
                 ShouldDecrementDesiredCapacity=True
             )
             if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
-                logger.info('Termination singal for instance is successfully sent.')
+                logger.info('Termination signal for instance is successfully sent.')
             else:
                 logger.info('Termination singal for instance has failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
                 raise Exception('Termination of instance failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
