@@ -104,6 +104,7 @@ eks-rolling-update.py -c my-eks-cluster
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                              | 20                                       |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
 | RUN_MODE                  | See Run Modes section below                                                                                           | 1                                        |
+| FRESH_NODE_DAYS            | The max age each node expected to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node.                                                                                            | 6                                        |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
 | EXTRA_DRAIN_ARGS          | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
 
@@ -112,11 +113,12 @@ There are a number of different values which can be set for the `RUN_MODE` envir
 
 `1` is the default.
 
-| Mode Number   | Description                                                                                     |
-|---------------|-------------------------------------------------------------------------------------------------|
-| 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.       |
-| 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.     |
-| 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.|
+| Mode Number   | Description                                                                                            |
+|---------------|--------------------------------------------------------------------------------------------------------|
+| 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.              |
+| 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.            |
+| 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.       |
+| 4             | Roll EKS nodes based on age instead of launch config (works with `FRESH_NODE_DAYS` default to 6 days) .|
 
 Each of them have different advantages and disadvantages.
 * Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
