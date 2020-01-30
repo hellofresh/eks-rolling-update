@@ -19,4 +19,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY lib ./lib
 COPY config.py eks_rolling_update.py ./
 
-ENTRYPOINT ["python", "eks_rolling_update.py"]
+CMD ["python", "eks_rolling_update.py"]
