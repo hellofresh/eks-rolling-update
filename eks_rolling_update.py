@@ -99,7 +99,7 @@ def scale_up_asg(cluster_name, asg, count):
         else:
             scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, asg_old_max_size)
 
-        cluster_health_wait = int(app_config['CLUSTER_HEALTH_WAIT'])
+        cluster_health_wait = app_config['CLUSTER_HEALTH_WAIT']
         logger.info(f'Waiting for {cluster_health_wait} seconds for ASG to scale before validating cluster health...')
         time.sleep(cluster_health_wait)
         asg_instance_count = count_all_cluster_instances(cluster_name)
@@ -117,7 +117,7 @@ def scale_up_asg(cluster_name, asg, count):
 
 
 def update_asgs(asgs, cluster_name):
-    run_mode = int(app_config['RUN_MODE'])
+    run_mode = app_config['RUN_MODE']
 
     asg_outdated_instance_dict = plan_asgs(asgs)
 
@@ -189,7 +189,7 @@ def update_asgs(asgs, cluster_name):
                 if app_config['ASG_WAIT_FOR_DETACHMENT'] and not instance_detached(outdated['InstanceId']):
                     raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
-                between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
+                between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                 if between_nodes_wait != 0:
                     logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                     time.sleep(between_nodes_wait)
