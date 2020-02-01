@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import argparse
 import time
@@ -185,7 +186,7 @@ def update_asgs(asgs, cluster_name):
                 if not instance_terminated(outdated['InstanceId']):
                     raise Exception('Instance is failing to terminate. Cancelling out.')
                 detach_instance(outdated['InstanceId'], asg_name)
-                if not instance_detached(outdated['InstanceId']):
+                if app_config['ASG_WAIT_FOR_DETACHMENT'] and not instance_detached(outdated['InstanceId']):
                     raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
                 between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
