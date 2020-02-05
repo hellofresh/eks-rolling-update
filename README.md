@@ -118,7 +118,7 @@ There are a number of different values which can be set for the `RUN_MODE` envir
 | 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.              |
 | 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.            |
 | 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.       |
-| 4             | Roll EKS nodes based on age instead of launch config (works with `FRESH_NODE_DAYS` default to 6 days.  |
+| 4             | Roll EKS nodes based on age instead of launch config (works with `FRESH_NODE_DAYS` default to 6 days). |
 
 Each of them have different advantages and disadvantages.
 * Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
