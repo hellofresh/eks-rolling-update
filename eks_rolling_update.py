@@ -11,7 +11,6 @@ from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_
     drain_node, delete_node, cordon_node
 from lib.exceptions import RollingUpdateException
 
-
 def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
     cluster_healthy = False
     # check if asg has enough nodes first before checking instance health
@@ -188,13 +187,6 @@ def update_asgs(asgs, cluster_name):
                 terminate_instance_in_asg(outdated['InstanceId'])
                 if not instance_terminated(outdated['InstanceId']):
                     raise Exception('Instance is failing to terminate. Cancelling out.')
-
-                #terminate_instance(outdated['InstanceId'])
-                #if not instance_terminated(outdated['InstanceId']):
-                #    raise Exception('Instance is failing to terminate. Cancelling out.')
-                #detach_instance(outdated['InstanceId'], asg_name)
-                #if not instance_detached(outdated['InstanceId']):
-                #    raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
                 between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
                 if between_nodes_wait != 0:

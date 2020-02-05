@@ -47,7 +47,7 @@ def terminate_instance_in_asg(instance_id):
             if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
                 logger.info('Termination signal for instance is successfully sent.')
             else:
-                logger.info('Termination singal for instance has failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+                logger.info('Termination signal for instance has failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
                 raise Exception('Termination of instance failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
 
         except client.exceptions.ClientError as e:
@@ -257,7 +257,7 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     return False
 
 
-def older_instance (instance_id, days_fresh):
+def instance_outdated_age (instance_id, days_fresh):
 
     response = ec2_client.describe_instances(
         InstanceIds=[
@@ -267,7 +267,10 @@ def older_instance (instance_id, days_fresh):
 
     instance_launch_time = response['Reservations'][0]['Instances'][0]['LaunchTime']
 
+    #gets the age of a node by days only:
     instance_age = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).days)
+    
+    #gets the remaining age of a node in seconds (e.g. if node is y days and x seconds old this will only retrieve the x seconds):
     instance_age_remainder = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).seconds)
 
     if instance_age > days_fresh:
@@ -365,7 +368,7 @@ def plan_asgs_older_nodes(asgs):
         # return a list of outdated instances
         outdated_instances = []
         for instance in instances:
-            if older_instance(instance['InstanceId'], days_fresh):
+            if instance_outdated_age(instance['InstanceId'], days_fresh):
                     outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
