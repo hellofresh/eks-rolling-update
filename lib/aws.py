@@ -363,7 +363,7 @@ def detach_instance(instance_id, asg_name):
             ShouldDecrementDesiredCapacity=True
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
-            logger.info('Instance detachment from ASG succeeded.')
+            logger.info('Instance detachment from ASG successfully initiated.')
         else:
             logger.info('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
             raise Exception('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
