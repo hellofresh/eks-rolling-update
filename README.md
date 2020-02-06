@@ -125,50 +125,47 @@ Each of them have different advantages and disadvantages.
 * Cordoning the nodes for all ASGs at once could cause issues if new pods needs to start during the process
 
 ## Examples
-  - enable the updater to operate on `cluster-autoscaler`
-    ```
-    #
-    # set your AWS environment before running eks rolling update
-    #
 
-    # NOTE: This examople will only work if you have cluster-autoscaler operating inside your cluster!
-    # Let the updater know that cluster-autoscaler is running in your cluster
+* Cluster Autoscaler
 
-    $ export  K8S_AUTOSCALER_ENABLED=1 \
-              K8S_AUTOSCALER_NAMESPACE="CA_NAMESPACE" \
-              K8S_AUTOSCALER_DEPLOYMENT="CA_DEPLOYMENT_NAME"
+If using `cluster-autoscaler`, you must let `eks-rolling-update` know that cluster-autoscaler is running in your cluster by exporting the following environment variables:
 
-    # plan
-    $ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME --plan
-    ...
+```
+$ export  K8S_AUTOSCALER_ENABLED=1 \
+          K8S_AUTOSCALER_NAMESPACE="CA_NAMESPACE" \
+          K8S_AUTOSCALER_DEPLOYMENT="CA_DEPLOYMENT_NAME"
+```
 
-    # apply changes
-    $ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
-    ```
-- disable operations on `cluster-autoscaler`
-  ```
-    $ unset K8S_AUTOSCALER_ENABLED
-  ```
-- enable features only for one run
-  ```
-    # DRY_RUN will only be used by the current updater session
-    $ DRY_RUN=1 python eks_rolling_update.py --cluster_name YOUR_CLUSTER_NAME
+* Plan
 
-    # operate on cluster-autoscaler only for this updater session
-    $ K8S_AUTOSCALER_ENABLED=1 \
-      K8S_AUTOSCALER_NAMESPACE="somenamespace" \
-      K8S_AUTOSCALER_DEPLOYMENT="deploymentname" \
-      python eks_rolling_update.py --cluster_name YOUR_CLUSTER_NAME
-  ```
-- `.env` file
-  ```
-  # you can use .env file within your project directory to load updater settings
-  # e.g:
+```
+$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME --plan
+```
 
-  $ cat .env
-  DRY_RUN=1
-  $
-  ```
+Note: Set your AWS environment before running eks rolling update
+
+
+* Apply Changes
+
+```
+$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
+```
+
+* Disable operations on `cluster-autoscaler`
+
+```
+$ unset K8S_AUTOSCALER_ENABLED
+```
+
+
+* `.env` file
+
+You can use .env file within your project directory to load updater settings. e.g:
+
+```
+$ cat .env
+DRY_RUN=1
+```
 
 <a name="docker"></a>
 ## Docker
