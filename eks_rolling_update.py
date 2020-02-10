@@ -5,12 +5,11 @@ import shutil
 from config import app_config
 from lib.logger import logger
 from lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
-    count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, \
-    detach_instance, instance_detached
+    count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance_in_asg, scale_asg, plan_asgs, delete_asg_tags, \
+    instance_detached, plan_asgs_older_nodes
 from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node
 from lib.exceptions import RollingUpdateException
-
 
 def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
     cluster_healthy = False
@@ -118,7 +117,11 @@ def scale_up_asg(cluster_name, asg, count):
 def update_asgs(asgs, cluster_name):
     run_mode = int(app_config['RUN_MODE'])
 
-    asg_outdated_instance_dict = plan_asgs(asgs)
+    if run_mode == 4:
+        asg_outdated_instance_dict = plan_asgs_older_nodes(asgs)
+
+    else:
+        asg_outdated_instance_dict = plan_asgs(asgs)
 
     asg_original_state_dict = {}
 
@@ -151,12 +154,12 @@ def update_asgs(asgs, cluster_name):
         outdated_instances, asg = asg_tuple
         outdated_instance_count = len(outdated_instances)
 
-        if (run_mode == 1) or (run_mode == 3):
+        if (run_mode == 1) or (run_mode == 3) or (run_mode == 4):
             logger.info(
                 f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
-        if run_mode == 1:
+        if (run_mode == 1) or (run_mode == 4):
             for outdated in outdated_instances:
                 node_name = ""
                 try:
@@ -181,12 +184,9 @@ def update_asgs(asgs, cluster_name):
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 drain_node(node_name)
                 delete_node(node_name)
-                terminate_instance(outdated['InstanceId'])
+                terminate_instance_in_asg(outdated['InstanceId'])
                 if not instance_terminated(outdated['InstanceId']):
                     raise Exception('Instance is failing to terminate. Cancelling out.')
-                detach_instance(outdated['InstanceId'], asg_name)
-                if not instance_detached(outdated['InstanceId']):
-                    raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
                 between_nodes_wait = int(app_config['BETWEEN_NODES_WAIT'])
                 if between_nodes_wait != 0:
@@ -224,8 +224,15 @@ if __name__ == "__main__":
         quit(1)
     filtered_asgs = get_asgs(args.cluster_name)
     # perform a dry run
-    if args.plan:
+
+    run_mode = int(app_config['RUN_MODE'])
+
+    if args.plan and (run_mode == 4):
+        plan_asgs_older_nodes(filtered_asgs)
+
+    elif args.plan:
         plan_asgs(filtered_asgs)
+
     else:
         # perform real update
         if app_config['K8S_AUTOSCALER_ENABLED']:
