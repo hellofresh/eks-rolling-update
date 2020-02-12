@@ -52,6 +52,7 @@ def scale_up_asg(cluster_name, asg, count):
     # remove any stale suspensions from asg that may be present
     modify_aws_autoscaling(asg_name, "resume")
 
+    use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
     asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
     asg_tag_orig_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
     asg_tag_orig_max_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_MAX_CAPACITY_TAG"])
@@ -69,12 +70,16 @@ def scale_up_asg(cluster_name, asg, count):
             save_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"], asg_old_max_size)
             return asg_old_desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
+    # True: use ASG's 'DesiredCapacity' to count the instances
+    # False: use Instances list to count the instances
+    predictive = True if use_asg_termination_policy else False
+
     # only scale up if no previous desired capacity tag set
     if asg_tag_desired_capacity.get('Value'):
         logger.info('Found previous desired capacity value tag set on asg from a previous run.')
         logger.info(f'Maintaining previous capacity of {asg_old_desired_capacity} to not overscale.')
 
-        asg_instance_count = count_all_cluster_instances(cluster_name)
+        asg_instance_count = count_all_cluster_instances(cluster_name, predictive=predictive)
 
         # check cluster health before doing anything
         if not validate_cluster_health(
@@ -102,7 +107,7 @@ def scale_up_asg(cluster_name, asg, count):
         cluster_health_wait = app_config['CLUSTER_HEALTH_WAIT']
         logger.info(f'Waiting for {cluster_health_wait} seconds for ASG to scale before validating cluster health...')
         time.sleep(cluster_health_wait)
-        asg_instance_count = count_all_cluster_instances(cluster_name)
+        asg_instance_count = count_all_cluster_instances(cluster_name, predictive=predictive)
 
         # check cluster health before doing anything
         if not validate_cluster_health(
@@ -118,7 +123,7 @@ def scale_up_asg(cluster_name, asg, count):
 
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
-
+    use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
     asg_outdated_instance_dict = plan_asgs(asgs)
 
     asg_original_state_dict = {}
@@ -170,9 +175,10 @@ def update_asgs(asgs, cluster_name):
                     exit(1)
 
         if len(outdated_instances) != 0:
-            # pause aws autoscaling so new instances dont try
-            # to spawn while instances are being terminated
-            modify_aws_autoscaling(asg_name, "suspend")
+            # if ASG termination is ignored then suspend 'Launch' and 'ReplaceUnhealthy'
+            # for this ASG to avoid instances being spawned during terminate/detach phase
+            if not use_asg_termination_policy:
+                modify_aws_autoscaling(asg_name, "suspend")
 
         # start draining and terminating
         for outdated in outdated_instances:
@@ -182,17 +188,19 @@ def update_asgs(asgs, cluster_name):
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 drain_node(node_name)
                 delete_node(node_name)
-                terminate_instance(outdated['InstanceId'])
-                if not instance_terminated(outdated['InstanceId']):
-                    raise Exception('Instance is failing to terminate. Cancelling out.')
-                detach_instance(outdated['InstanceId'], asg_name)
-                if app_config['ASG_WAIT_FOR_DETACHMENT'] and not instance_detached(outdated['InstanceId']):
-                    raise Exception('Instance is failing to detach from ASG. Cancelling out.')
+                # terminate/detach outdated instances only if ASG termination policy is ignored
+                if not use_asg_termination_policy:
+                    terminate_instance(outdated['InstanceId'])
+                    if not instance_terminated(outdated['InstanceId']):
+                        raise Exception('Instance is failing to terminate. Cancelling out.')
+                    detach_instance(outdated['InstanceId'], asg_name)
+                    if app_config['ASG_WAIT_FOR_DETACHMENT'] and not instance_detached(outdated['InstanceId']):
+                        raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
-                between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
-                if between_nodes_wait != 0:
-                    logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
-                    time.sleep(between_nodes_wait)
+                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
+                    if between_nodes_wait != 0:
+                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                        time.sleep(between_nodes_wait)
             except Exception as drain_exception:
                 logger.info(drain_exception)
                 raise RollingUpdateException("Rolling update on ASG failed", asg_name)
@@ -201,8 +209,9 @@ def update_asgs(asgs, cluster_name):
         logger.info("Scaling asg back down to original state")
         asg_desired_capacity, asg_orig_desired_capacity, asg_orig_max_capacity = asg_original_state_dict[asg_name]
         scale_asg(asg_name, asg_desired_capacity, asg_orig_desired_capacity, asg_orig_max_capacity)
-        # resume aws autoscaling
-        modify_aws_autoscaling(asg_name, "resume")
+        # resume aws autoscaling only if ASG termination policy is ignored
+        if not use_asg_termination_policy:
+            modify_aws_autoscaling(asg_name, "resume")
         # remove aws tag
         delete_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"])
         delete_asg_tags(asg_name, app_config["ASG_ORIG_CAPACITY_TAG"])

@@ -52,7 +52,6 @@ def terminate_instance(instance_id):
         if 'DryRunOperation' not in str(e):
             raise
 
-
 def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that all instances in an ASG have a HealthStatus of healthy. Returns False if not
@@ -339,15 +338,18 @@ def get_asg_tag(tags, tag_name):
     return result
 
 
-def count_all_cluster_instances(cluster_name):
+def count_all_cluster_instances(cluster_name, predictive=False):
     """
     Returns the total number of ec2 instances in a k8s cluster
     """
     count = 0
     asgs = get_asgs(cluster_name)
     for asg in asgs:
-        count += len(asg['Instances'])
-    logger.info("Current asg instance count in cluster is: {}. K8s node count should match this number".format(count))
+        if predictive:
+            count += asg['DesiredCapacity']
+        else:
+            count += len(asg['Instances'])
+    logger.info("{} asg instance count in cluster is: {}. K8s node count should match this number".format("*** Predicted" if predictive else "Current", count))
     return count
 
 
