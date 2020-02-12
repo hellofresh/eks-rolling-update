@@ -52,6 +52,7 @@ def terminate_instance(instance_id):
         if 'DryRunOperation' not in str(e):
             raise
 
+
 def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that all instances in an ASG have a HealthStatus of healthy. Returns False if not
