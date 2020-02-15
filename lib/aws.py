@@ -258,7 +258,7 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     return False
 
 
-def instance_outdated_age (instance_id, days_fresh):
+def instance_outdated_age(instance_id, days_fresh):
 
     response = ec2_client.describe_instances(
         InstanceIds=[
