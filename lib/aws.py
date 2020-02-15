@@ -357,7 +357,7 @@ def plan_asgs_older_nodes(asgs):
     """
     Checks to see which asgs are out of date
     """
-    days_fresh = app_config['FRESH_NODE_DAYS']
+    days_fresh = app_config['MAX_ALLOWABLE_NODE_AGE']
 
     asg_outdated_instance_dict = {}
     for asg in asgs:
