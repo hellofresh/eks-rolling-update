@@ -7,10 +7,11 @@ from config import app_config
 from lib.logger import logger
 from lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance_in_asg, scale_asg, plan_asgs, delete_asg_tags, \
-    instance_detached, plan_asgs_older_nodes
+    plan_asgs_older_nodes
 from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node
 from lib.exceptions import RollingUpdateException
+
 
 def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
     cluster_healthy = False

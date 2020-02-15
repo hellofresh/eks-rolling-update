@@ -54,6 +54,7 @@ def terminate_instance_in_asg(instance_id):
             if 'DryRunOperation' not in str(e):
                 raise
 
+
 def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that all instances in an ASG have a HealthStatus of healthy. Returns False if not
@@ -266,11 +267,13 @@ def instance_outdated_age (instance_id, days_fresh):
     )
 
     instance_launch_time = response['Reservations'][0]['Instances'][0]['LaunchTime']
-
-    #gets the age of a node by days only:
+    """
+    gets the age of a node by days only:
+    """
     instance_age = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).days)
-    
-    #gets the remaining age of a node in seconds (e.g. if node is y days and x seconds old this will only retrieve the x seconds):
+    """
+    gets the remaining age of a node in seconds (e.g. if node is y days and x seconds old this will only retrieve the x seconds):
+    """
     instance_age_remainder = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).seconds)
 
     if instance_age > days_fresh:
@@ -282,6 +285,7 @@ def instance_outdated_age (instance_id, days_fresh):
     else:
         logger.info("Instance id {} : OK ".format(instance_id))
         return False
+
 
 def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
@@ -353,6 +357,7 @@ def plan_asgs(asgs):
 
     return asg_outdated_instance_dict
 
+
 def plan_asgs_older_nodes(asgs):
     """
     Checks to see which asgs are out of date
@@ -365,11 +370,13 @@ def plan_asgs_older_nodes(asgs):
         logger.info('*** Checking for nodes older than {} days in autoscaling group {} ***'.format(days_fresh, asg_name))
 
         instances = asg['Instances']
-        # return a list of outdated instances
+        """
+        return a list of outdated instances
+        """
         outdated_instances = []
         for instance in instances:
             if instance_outdated_age(instance['InstanceId'], days_fresh):
-                    outdated_instances.append(instance)
+                outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
         )
@@ -400,6 +407,7 @@ def count_all_cluster_instances(cluster_name):
         count += len(asg['Instances'])
     logger.info("Current asg instance count in cluster is: {}. K8s node count should match this number".format(count))
     return count
+
 
 def instance_detached(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
