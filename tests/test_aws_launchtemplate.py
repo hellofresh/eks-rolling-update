@@ -2,7 +2,7 @@ import os
 import unittest
 import json
 from moto import mock_autoscaling, mock_ec2
-from lib.aws import instance_outdated_launchtemplate
+from eksrollup.lib.aws import instance_outdated_launchtemplate
 from unittest.mock import patch
 
 
@@ -47,7 +47,7 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+            with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
                 get_launch_template_mock.return_value = self.mock_get_launch_template
                 self.assertTrue(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Default'))
 
@@ -56,7 +56,7 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+            with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
                 get_launch_template_mock.return_value = self.mock_get_launch_template
                 self.assertFalse(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Default'))
 
@@ -65,7 +65,7 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+            with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
                 get_launch_template_mock.return_value = self.mock_get_launch_template
                 self.assertFalse(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Latest'))
 
@@ -74,6 +74,6 @@ class TestAWS(unittest.TestCase):
         asgs = response['AutoScalingGroups']
         for asg in asgs:
             instances = asg['Instances']
-            with patch('lib.aws.get_launch_template') as get_launch_template_mock:
+            with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
                 get_launch_template_mock.return_value = self.mock_get_launch_template
                 self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Latest'))

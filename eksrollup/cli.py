@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 import sys
 import argparse
 import time
 import shutil
-from config import app_config
-from lib.logger import logger
-from lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
+from .config import app_config
+from .lib.logger import logger
+from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, \
     detach_instance, instance_detached
-from lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
+from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node
-from lib.exceptions import RollingUpdateException
+from .lib.exceptions import RollingUpdateException
 
 
 def validate_cluster_health(asg_name, new_desired_asg_capacity, desired_k8s_node_count, ):
@@ -220,13 +219,13 @@ def update_asgs(asgs, cluster_name):
     logger.info('All asgs processed')
 
 
-if __name__ == "__main__":
+def main(args=None):
     parser = argparse.ArgumentParser(description='Rolling update on cluster')
     parser.add_argument('--cluster_name', '-c', required=True,
                         help='the cluster name to perform rolling update on')
-    parser.add_argument('--plan', '-p', nargs='?', const=True,
+    parser.add_argument('--plan', '-p', action='store_const', const=True,
                         help='perform a dry run to see which instances are out of date')
-    args = parser.parse_args()
+    args = parser.parse_args(args)
     # check kubectl is installed
     kctl = shutil.which('kubectl')
     if not kctl:

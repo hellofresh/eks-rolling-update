@@ -9,3 +9,4 @@ venv
 build/
 dist/
 *.egg-info/
+Dockerfile
