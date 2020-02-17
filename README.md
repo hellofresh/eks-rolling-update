@@ -100,6 +100,7 @@ eks_rolling_update.py -c my-eks-cluster
 | ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
 | ASG_ORIG_MAX_CAPACITY_TAG | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
 | ASG_WAIT_FOR_DETACHMENT   | If True, waits for detachment to fully complete (draining connections etc) after terminating instance and detaching   | True                                     |
+| ASG_USE_TERMINATION_POLICY| Use ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)      | False                                    |
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                          | 90                                       |
 | GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                                  | 12                                       |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                              | 20                                       |

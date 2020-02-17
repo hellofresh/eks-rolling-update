@@ -15,6 +15,7 @@ app_config = {
     'ASG_ORIG_CAPACITY_TAG': 'eks-rolling-update:original_capacity',
     'ASG_ORIG_MAX_CAPACITY_TAG': 'eks-rolling-update:original_max_capacity',
     'ASG_WAIT_FOR_DETACHMENT': str_to_bool(os.getenv('ASG_WAIT_FOR_DETACHMENT', True)),
+    'ASG_USE_TERMINATION_POLICY': str_to_bool(os.getenv('ASG_USE_TERMINATION_POLICY', False)),
     'CLUSTER_HEALTH_WAIT': int(os.getenv('CLUSTER_HEALTH_WAIT', 90)),
     'GLOBAL_MAX_RETRY': int(os.getenv('GLOBAL_MAX_RETRY', 12)),
     'GLOBAL_HEALTH_WAIT': int(os.getenv('GLOBAL_HEALTH_WAIT', 20)),
