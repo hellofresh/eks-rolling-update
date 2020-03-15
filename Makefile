@@ -26,6 +26,7 @@ help:
 	@echo "  code-style                 to run pep8 on src"
 	@echo "  dist        version=1.2.3  to build wheel distribution of version 1.2.3"
 	@echo "  dist-upload version=1.2.3  to build + upload to PyPi wheel distributionof version 1.2.3"
+	@echo "  docker-dist version=1.2.3  to build a Docker image of version 1.2.3"
 
 
 setup: clean virtualenv requirements test-requirements
@@ -62,8 +63,10 @@ dist: before-dist
 dist-upload: dist
 	twine upload $(CURDIR)/dist/*
 
-docker-dist:
-	docker build . -t eks_rolling_update:latest
+docker-dist: check_version
+	docker build . --build-arg VERSION=$(version) \
+		-t eks-rolling-update:$(version) \
+		-t eks-rolling-update:latest
 
 check_version:
 ifndef version

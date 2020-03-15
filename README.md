@@ -164,14 +164,18 @@ DRY_RUN=1
 <a name="docker"></a>
 ## Docker
 
-Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image. `docker build -t eks-rolling-update:latest .`
+Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image.
+
+```bash
+make docker-dist version=1.0.DEV
+```
 
 After building the image, run using the command
 ```bash
 docker run -ti --rm \
   -e AWS_DEFAULT_REGION \
-  -v $(pwd)/.aws:/root/.aws \
-  -v $(pwd)/.kube/config:/root/.kube/config \
+  -v "${HOME}/.aws:/root/.aws" \
+  -v "${HOME}/.kube/config:/root/.kube/config" \
   eks-rolling-update:latest \
   -c my-cluster
 ```
