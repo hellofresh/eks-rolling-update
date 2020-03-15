@@ -36,7 +36,7 @@ run:
 test: code-style test-unit
 
 test-unit:
-	PYTHONPATH=$(CURDIR) nose2 --with-coverage
+	PYTHONPATH=$(CURDIR) AWS_DEFAULT_REGION=us-east-1 nose2 --with-coverage
 
 code-style:
 	flake8 --ignore E501 eksrollup/
@@ -53,8 +53,10 @@ requirements:
 test-requirements:
 	$(CURDIR)/$(VENV)/bin/pip3 install -r requirements-tests.txt
 
-dist: check_version
+before-dist: check_version
 	mkdir -p build && echo "VERSION = '$(version)'" > build/__version__.py
+
+dist: before-dist
 	python3 $(CURDIR)/setup.py sdist bdist_wheel
 
 dist-upload: dist

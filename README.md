@@ -51,7 +51,7 @@ To achieve this, it performs the following actions:
 ### From PyPi
 
 ```
-pip3 install eks_rolling_update
+pip3 install eks-rolling-update
 ```
 
 ### From source

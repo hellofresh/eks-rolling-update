@@ -2,7 +2,21 @@ dist: xenial   # required for Python >= 3.7
 language: python
 python:
   - "3.7"
+env:
+  - VERSION=1.0
 install:
   - pip3 install -r requirements.txt
   - pip3 install -r requirements-tests.txt
 script: make test
+before_deploy:
+  - make before-dist version=${VERSION}.${TRAVIS_BUILD_NUMBER}
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: "PyPi API token encrypted with 'travis encrypt <token>'"
+  edge: true
+  distributions: sdist bdist_wheel
+  on:
+    repo: hellofresh/eks-rolling-update
+    branch: master
