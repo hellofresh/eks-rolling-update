@@ -4,9 +4,9 @@
 
 # EKS Rolling Update
 
-[![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
+EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster.
 
-> EKS Rolling Update is a utility for updating the launch configuration or template of worker nodes in an EKS cluster.
+[![Build Status](https://travis-ci.org/hellofresh/eks-rolling-update.svg?branch=master)](https://travis-ci.org/hellofresh/eks-rolling-update)
 
 
 - [Intro](#intro)
@@ -42,15 +42,19 @@ To achieve this, it performs the following actions:
 ## Requirements
 
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed
-* `KUBECONFIG` environment variable set
+* `KUBECONFIG` environment variable set, or config available in `${HOME}/.kube/config` per default
 * AWS credentials [configured](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#guide-configuration)
-
-EKS Rolling Update expects that you have valid `KUBECONFIG` and AWS credentials set prior to running.
 
 <a name="installation"></a>
 ## Installation
 
-Install
+### From PyPi
+
+```
+pip3 install eks-rolling-update
+```
+
+### From source
 
 ```
 virtualenv -p python3 venv
@@ -58,18 +62,11 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-Set KUBECONFIG and context
-
-```
-export KUBECONFIG=~/.kube/config
-ktx <environment>
-```
-
 <a name="usage"></a>
 ## Usage
 
 ```
-usage: eks_rolling_update.py [-h] --cluster_name CLUSTER_NAME [--plan [PLAN]]
+usage: eks_rolling_update.py [-h] --cluster_name CLUSTER_NAME [--plan]
 
 Rolling update on cluster
 
@@ -77,8 +74,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --cluster_name CLUSTER_NAME, -c CLUSTER_NAME
                         the cluster name to perform rolling update on
-  --plan [PLAN], -p [PLAN]
-                        perform a dry run to see which instances are out of
+  --plan, -p            perform a dry run to see which instances are out of
                         date
 ```
 
@@ -90,7 +86,7 @@ eks_rolling_update.py -c my-eks-cluster
 
 ## Configuration
 
-| Parameter                 | Description                                                                                                           | Default                                  |
+| Environment Variable      | Description                                                                                                           | Default                                  |
 |---------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------------------|
 | K8S_AUTOSCALER_ENABLED    | If True Kubernetes Autoscaler will be paused before running update                                                    | False                                    |
 | K8S_AUTOSCALER_NAMESPACE  | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
@@ -127,6 +123,18 @@ Each of them have different advantages and disadvantages.
 
 ## Examples
 
+* Plan
+
+```
+$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME --plan
+```
+
+* Apply Changes
+
+```
+$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
+```
+
 * Cluster Autoscaler
 
 If using `cluster-autoscaler`, you must let `eks-rolling-update` know that cluster-autoscaler is running in your cluster by exporting the following environment variables:
@@ -137,31 +145,16 @@ $ export  K8S_AUTOSCALER_ENABLED=1 \
           K8S_AUTOSCALER_DEPLOYMENT="CA_DEPLOYMENT_NAME"
 ```
 
-* Plan
-
-```
-$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME --plan
-```
-
-Note: Set your AWS environment before running eks rolling update
-
-
-* Apply Changes
-
-```
-$ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
-```
-
 * Disable operations on `cluster-autoscaler`
 
 ```
 $ unset K8S_AUTOSCALER_ENABLED
 ```
 
+* Configure tool via `.env` file
 
-* `.env` file
-
-You can use .env file within your project directory to load updater settings. e.g:
+Rather than using environment variables, you can use a `.env` file within your working directory to load 
+updater settings. e.g:
 
 ```
 $ cat .env
@@ -171,16 +164,20 @@ DRY_RUN=1
 <a name="docker"></a>
 ## Docker
 
-Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image. `docker build -t eks-rolling-update:latest .`
+Although no public Docker image is currently published for this project, feel free to use the included [Dockerfile](Dockerfile) to build your own image.
+
+```bash
+make docker-dist version=1.0.DEV
+```
 
 After building the image, run using the command
 ```bash
 docker run -ti --rm \
   -e AWS_DEFAULT_REGION \
-  -v $(pwd)/.aws:/root/.aws \
-  -v $(pwd)/.kube/config:/root/.kube/config \
+  -v "${HOME}/.aws:/root/.aws" \
+  -v "${HOME}/.kube/config:/root/.kube/config" \
   eks-rolling-update:latest \
-  -c my-cluster`
+  -c my-cluster
 ```
 
 Pass in any additional environment variables and options as described elsewhere in this file.

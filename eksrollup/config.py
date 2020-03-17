@@ -1,15 +1,17 @@
 from dotenv import load_dotenv
 from distutils.util import strtobool
 import os
-load_dotenv()
+load_dotenv('{}/.env'.format(os.getcwd()))
+
 
 def str_to_bool(val):
     return val if type(val) is bool else bool(strtobool(val))
 
+
 app_config = {
     'K8S_AUTOSCALER_ENABLED': str_to_bool(os.getenv('K8S_AUTOSCALER_ENABLED', False)),
-    'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE','default'),
-    'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT','cluster-autoscaler'),
+    'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE', 'default'),
+    'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT', 'cluster-autoscaler'),
     'K8S_AUTOSCALER_REPLICAS': int(os.getenv('K8S_AUTOSCALER_REPLICAS', 2)),
     'ASG_DESIRED_STATE_TAG': 'eks-rolling-update:desired_capacity',
     'ASG_ORIG_CAPACITY_TAG': 'eks-rolling-update:original_capacity',

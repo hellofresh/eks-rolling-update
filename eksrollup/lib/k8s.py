@@ -3,8 +3,8 @@ from kubernetes.client.rest import ApiException
 import subprocess
 import time
 import sys
-from lib.logger import logger
-from config import app_config
+from .logger import logger
+from eksrollup.config import app_config
 
 
 def get_k8s_nodes(exclude_node_label_key=app_config["EXCLUDE_NODE_LABEL_KEY"]):

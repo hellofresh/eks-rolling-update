@@ -3,7 +3,7 @@ import unittest
 import boto3
 import json
 from moto import mock_autoscaling, mock_ec2
-from lib.aws import get_asg_tag, instance_outdated_launchconfiguration, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags, instance_terminated
+from eksrollup.lib.aws import get_asg_tag, instance_outdated_launchconfiguration, count_all_cluster_instances, is_asg_healthy, is_asg_scaled, modify_aws_autoscaling, save_asg_tags, delete_asg_tags, instance_terminated
 from unittest.mock import patch
 
 
@@ -108,7 +108,7 @@ class TestAWS(unittest.TestCase):
         self.assertTrue(result)
 
     def test_is_asg_healthy_fail(self):
-        with patch('lib.aws.client.describe_auto_scaling_groups') as describe_auto_scaling_groups_mock:
+        with patch('eksrollup.lib.aws.client.describe_auto_scaling_groups') as describe_auto_scaling_groups_mock:
             describe_auto_scaling_groups_mock.return_value = self.aws_response_mock_unhealthy
             result = is_asg_healthy('mock-asg', 2, 1)
             self.assertFalse(result)
@@ -135,7 +135,7 @@ class TestAWS(unittest.TestCase):
             delete_asg_tags('mock-asg', 'foo')
 
     def test_instance_terminated(self):
-        with patch('lib.aws.ec2_client.describe_instances') as describe_instances_mock:
+        with patch('eksrollup.lib.aws.ec2_client.describe_instances') as describe_instances_mock:
             describe_instances_mock.return_value = self.aws_response_mock_terminated
             self.assertTrue(instance_terminated(self.instance_id, 2, 1))
 
