@@ -32,25 +32,26 @@ def get_launch_template(lt_name):
     return response['LaunchTemplates'][0]
 
 
-def terminate_instance(instance_id):
+def terminate_instance_in_asg(instance_id):
     """
     Terminates EC2 instance given an instance ID
     """
-    logger.info('Terminating ec2 instance {}...'.format(instance_id))
-    try:
-        response = ec2_client.terminate_instances(
-            InstanceIds=[instance_id],
-            DryRun=app_config['DRY_RUN']
-        )
-        if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
-            logger.info('Termination of instance succeeded.')
-        else:
-            logger.info('Termination of instance failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
-            raise Exception('Termination of instance failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+    if not app_config['DRY_RUN']:
+        logger.info('Terminating ec2 instance in ASG {}...'.format(instance_id))
+        try:
+            response = client.terminate_instance_in_auto_scaling_group(
+                InstanceId=instance_id,
+                ShouldDecrementDesiredCapacity=True
+            )
+            if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
+                logger.info('Termination signal for instance is successfully sent.')
+            else:
+                logger.info('Termination signal for instance has failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
+                raise Exception('Termination of instance failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
 
-    except client.exceptions.ClientError as e:
-        if 'DryRunOperation' not in str(e):
-            raise
+        except client.exceptions.ClientError as e:
+            if 'DryRunOperation' not in str(e):
+                raise
 
 
 def is_asg_healthy(asg_name, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
@@ -352,48 +353,3 @@ def count_all_cluster_instances(cluster_name, predictive=False):
             count += len(asg['Instances'])
     logger.info("{} asg instance count in cluster is: {}. K8s node count should match this number".format("*** Predicted" if predictive else "Current", count))
     return count
-
-
-def detach_instance(instance_id, asg_name):
-    """
-    Detach EC2 instance from ASG given an instance ID and an ASG name
-    """
-    logger.info('Detaching ec2 instance {} from asg {}...'.format(instance_id, asg_name))
-    try:
-        response = client.detach_instances(
-            InstanceIds=[instance_id],
-            AutoScalingGroupName=asg_name,
-            ShouldDecrementDesiredCapacity=True
-        )
-        if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
-            logger.info('Instance detachment from ASG successfully initiated.')
-        else:
-            logger.info('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
-            raise Exception('Instance detachment from ASG failed. Response code was {}. Exiting.'.format(response['ResponseMetadata']['HTTPStatusCode']))
-
-    except client.exceptions.ClientError as e:
-        if 'DryRunOperation' not in str(e):
-            raise
-
-
-def instance_detached(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
-    """
-    Checks that an ec2 instance is detached from any asg given an InstanceID
-    """
-    retry_count = 1
-    is_instance_detached = False
-    while retry_count < max_retry:
-        logger.info('Checking instance {} is detached...'.format(instance_id))
-        retry_count += 1
-        response = client.describe_auto_scaling_instances(
-            InstanceIds=[instance_id], MaxRecords=1
-        )
-        if len(response['AutoScalingInstances']) != 0:
-            is_instance_detached = False
-            logger.info('Instance {} is still attached, checking again...'.format(instance_id))
-        else:
-            logger.info('Instance {} detached!'.format(instance_id))
-            is_instance_detached = True
-            break
-        time.sleep(wait)
-    return is_instance_detached

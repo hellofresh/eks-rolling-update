@@ -5,8 +5,7 @@ import shutil
 from .config import app_config
 from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
-    count_all_cluster_instances, save_asg_tags, get_asgs, terminate_instance, scale_asg, plan_asgs, delete_asg_tags, \
-    detach_instance, instance_detached
+    count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node
 from .lib.exceptions import RollingUpdateException
@@ -189,12 +188,9 @@ def update_asgs(asgs, cluster_name):
                 delete_node(node_name)
                 # terminate/detach outdated instances only if ASG termination policy is ignored
                 if not use_asg_termination_policy:
-                    terminate_instance(outdated['InstanceId'])
+                    terminate_instance_in_asg(outdated['InstanceId'])
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
-                    detach_instance(outdated['InstanceId'], asg_name)
-                    if app_config['ASG_WAIT_FOR_DETACHMENT'] and not instance_detached(outdated['InstanceId']):
-                        raise Exception('Instance is failing to detach from ASG. Cancelling out.')
 
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     if between_nodes_wait != 0:
