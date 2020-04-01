@@ -179,13 +179,16 @@ def update_asgs(asgs, cluster_name):
                 modify_aws_autoscaling(asg_name, "suspend")
 
         # start draining and terminating
+        desired_asg_capacity = asg['DesiredCapacity']
         for outdated in outdated_instances:
             # catch any failures so we can resume aws autoscaling
             try:
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                desired_asg_capacity -= 1
                 drain_node(node_name)
                 delete_node(node_name)
+                save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
                 # terminate/detach outdated instances only if ASG termination policy is ignored
                 if not use_asg_termination_policy:
                     terminate_instance_in_asg(outdated['InstanceId'])
@@ -243,17 +246,16 @@ def main(args=None):
                 modify_k8s_autoscaler("resume")
             logger.info('*** Rolling update of all asg is complete! ***')
         except RollingUpdateException as e:
-            logger.info("Rolling update encountered an exception. Resuming aws autoscaling.")
-            modify_aws_autoscaling(e.asg_name, "resume")
+            logger.error("Rolling update encountered an exception.")
+            logger.error('AWS Auto Scaling Group processes will need resuming manually')
             if app_config['K8S_AUTOSCALER_ENABLED']:
-                # resume autoscaler no matter what happens
-                modify_k8s_autoscaler("resume")
+                logger.error('Kubernetes Cluster Autoscaler will need resuming manually')
             # Send exit code 1 to the caller so CI shows a failure
             sys.exit(1)
         except Exception as e:
-            logger.info(e)
-            logger.info('*** Rolling update of asg has failed. Exiting ***')
+            logger.error(e)
+            logger.error('*** Rolling update of asg has failed. Exiting ***')
+            logger.error('AWS Auto Scaling Group processes will need resuming manually')
             if app_config['K8S_AUTOSCALER_ENABLED']:
-                # resume autoscaler no matter what happens
-                modify_k8s_autoscaler("resume")
+                logger.error('Kubernetes Cluster Autoscaler will need resuming manually')
             sys.exit(1)
