@@ -245,16 +245,9 @@ def main(args=None):
                 # resume autoscaler after asg updated
                 modify_k8s_autoscaler("resume")
             logger.info('*** Rolling update of all asg is complete! ***')
-        except RollingUpdateException as e:
-            logger.error("Rolling update encountered an exception.")
-            logger.error('AWS Auto Scaling Group processes will need resuming manually')
-            if app_config['K8S_AUTOSCALER_ENABLED']:
-                logger.error('Kubernetes Cluster Autoscaler will need resuming manually')
-            # Send exit code 1 to the caller so CI shows a failure
-            sys.exit(1)
         except Exception as e:
             logger.error(e)
-            logger.error('*** Rolling update of asg has failed. Exiting ***')
+            logger.error('*** Rolling update of ASG has failed. Exiting ***')
             logger.error('AWS Auto Scaling Group processes will need resuming manually')
             if app_config['K8S_AUTOSCALER_ENABLED']:
                 logger.error('Kubernetes Cluster Autoscaler will need resuming manually')
