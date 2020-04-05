@@ -1,5 +1,6 @@
 import boto3
 import time
+import datetime
 import requests
 from .logger import logger
 from eksrollup.config import app_config
@@ -257,6 +258,33 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     return False
 
 
+def instance_outdated_age (instance_id, days_fresh):
+
+    response = ec2_client.describe_instances(
+        InstanceIds=[
+            instance_id,
+        ]
+    )
+
+    instance_launch_time = response['Reservations'][0]['Instances'][0]['LaunchTime']
+
+    #gets the age of a node by days only:
+    instance_age = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).days)
+
+    #gets the remaining age of a node in seconds (e.g. if node is y days and x seconds old this will only retrieve the x seconds):
+    instance_age_remainder = ((datetime.datetime.now(instance_launch_time.tzinfo) - instance_launch_time).seconds)
+
+    if instance_age > days_fresh:
+        logger.info("Instance id {} launch age of '{}' day(s) is older than expected '{}' day(s)".format(instance_id, instance_age, days_fresh))
+        return True
+    elif (instance_age == days_fresh) and (instance_age_remainder > 0):
+        logger.info("Instance id {} is older than expected '{}' day(s) by {} seconds.".format(instance_id, days_fresh, instance_age_remainder))
+        return True
+    else:
+        logger.info("Instance id {} : OK ".format(instance_id))
+        return False
+
+
 def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
     """
     Checks that an ec2 instance is terminated or stopped given an InstanceID
@@ -319,6 +347,31 @@ def plan_asgs(asgs):
                     outdated_instances.append(instance)
             elif launch_type == "LaunchTemplate":
                 if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version):
+                    outdated_instances.append(instance)
+        logger.info('Found {} outdated instances'.format(
+            len(outdated_instances))
+        )
+        asg_outdated_instance_dict[asg_name] = outdated_instances, asg
+
+    return asg_outdated_instance_dict
+
+
+def plan_asgs_older_nodes(asgs):
+    """
+    Checks to see which asgs are out of date
+    """
+    days_fresh = app_config['MAX_ALLOWABLE_NODE_AGE']
+
+    asg_outdated_instance_dict = {}
+    for asg in asgs:
+        asg_name = asg['AutoScalingGroupName']
+        logger.info('*** Checking for nodes older than {} days in autoscaling group {} ***'.format(days_fresh, asg_name))
+
+        instances = asg['Instances']
+        # return a list of outdated instances
+        outdated_instances = []
+        for instance in instances:
+            if instance_outdated_age(instance['InstanceId'], days_fresh):
                     outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
