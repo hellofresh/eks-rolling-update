@@ -179,7 +179,7 @@ def update_asgs(asgs, cluster_name):
                 modify_aws_autoscaling(asg_name, "suspend")
 
         # start draining and terminating
-        desired_asg_capacity = asg['DesiredCapacity']
+        desired_asg_capacity = asg_original_state_dict[asg_name][0]
         for outdated in outdated_instances:
             # catch any failures so we can resume aws autoscaling
             try:
