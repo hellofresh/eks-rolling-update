@@ -14,6 +14,7 @@ FROM python:3-alpine3.10
 COPY --from=builder /aws-iam-authenticator /kubectl /usr/local/bin/
 COPY --from=builder /dist/*.whl /tmp
 
+RUN apk add --no-cache bash
 RUN pip3 install --no-cache-dir \
         awscli \
         /tmp/*.whl && \
