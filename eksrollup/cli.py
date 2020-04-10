@@ -165,7 +165,7 @@ def update_asgs(asgs, cluster_name):
                 f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_original_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
-        if (run_mode == 1) or (run_mode == 4):
+        if (run_mode == 1)  or (run_mode == 4):
             for outdated in outdated_instances:
                 node_name = ""
                 try:
