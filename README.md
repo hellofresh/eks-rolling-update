@@ -104,6 +104,7 @@ eks_rolling_update.py -c my-eks-cluster
 | RUN_MODE                  | See Run Modes section below                                                                                           | 1                                        |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
 | EXTRA_DRAIN_ARGS          | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
+| MAX_ALLOWABLE_NODE_AGE    | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node.      | 6                                          |
 
 ## Run Modes
 There are a number of different values which can be set for the `RUN_MODE` environment variable.
@@ -115,6 +116,8 @@ There are a number of different values which can be set for the `RUN_MODE` envir
 | 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.       |
 | 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.     |
 | 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.|
+| 4             | Roll EKS nodes based on age instead of launch config (works with `MAX_ALLOWABLE_NODE_AGE` with default 6 days value). |
+
 
 Each of them have different advantages and disadvantages.
 * Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
