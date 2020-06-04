@@ -143,6 +143,35 @@ def cordon_node(node_name):
         logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
 
 
+def taint_node(node_name):
+    """
+    Taint a kubernetes node to avoid new pods being scheduled on it
+    """
+
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            raise Exception("Could not configure kubernetes python client")
+
+    configuration = client.Configuration()
+    # create an instance of the API class
+    k8s_api = client.CoreV1Api(client.ApiClient(configuration))
+    logger.info("Adding taint to k8s node {}...".format(node_name))
+    try:
+        taint = client.V1Taint(effect='NoSchedule', key= 'eks-rolling-update')
+        api_call_body = client.V1Node(spec=client.V1NodeSpec(taints=[taint]))
+        if not app_config['DRY_RUN']:
+            k8s_api.patch_node(node_name, api_call_body)
+        else:
+            k8s_api.patch_node(node_name, api_call_body, dry_run=True)
+        logger.info("Added taint to the node")
+    except ApiException as e:
+        logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
+
+
 def drain_node(node_name):
     """
     Executes kubectl commands to drain the node. We are not using the api
