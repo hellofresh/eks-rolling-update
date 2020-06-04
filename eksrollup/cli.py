@@ -5,7 +5,7 @@ import shutil
 from .config import app_config
 from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
-    count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags
+    count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node, taint_node
 from .lib.exceptions import RollingUpdateException
@@ -122,7 +122,12 @@ def scale_up_asg(cluster_name, asg, count):
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
-    asg_outdated_instance_dict = plan_asgs(asgs)
+
+    if run_mode == 4:
+        asg_outdated_instance_dict = plan_asgs_older_nodes(asgs)
+
+    else:
+        asg_outdated_instance_dict = plan_asgs(asgs)
 
     asg_state_dict = {}
 
@@ -158,12 +163,12 @@ def update_asgs(asgs, cluster_name):
         outdated_instances, asg = asg_tuple
         outdated_instance_count = len(outdated_instances)
 
-        if (run_mode == 1) or (run_mode == 3):
+        if (run_mode == 1) or (run_mode == 3) or (run_mode == 4):
             logger.info(
                 f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
-        if run_mode == 1:
+        if (run_mode == 1) or (run_mode == 4):
             for outdated in outdated_instances:
                 node_name = ""
                 try:
@@ -237,8 +242,12 @@ def main(args=None):
         logger.info('kubectl is required to be installed before proceeding')
         quit(1)
     filtered_asgs = get_asgs(args.cluster_name)
-    # perform a dry run
-    if args.plan:
+    run_mode = app_config['RUN_MODE']
+    # perform a dry run on mode 4 for older nodes
+    if args.plan and (run_mode == 4):
+        plan_asgs_older_nodes(filtered_asgs)
+    # perform a dry run on main mode
+    elif args.plan:
         plan_asgs(filtered_asgs)
     else:
         # perform real update
