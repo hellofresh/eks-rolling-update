@@ -25,5 +25,6 @@ app_config = {
     'RUN_MODE': int(os.getenv('RUN_MODE', 1)),
     'DRY_RUN': str_to_bool(os.getenv('DRY_RUN', False)),
     'EXCLUDE_NODE_LABEL_KEY': 'spotinst.io/node-lifecycle',
-    'EXTRA_DRAIN_ARGS': os.getenv('EXTRA_DRAIN_ARGS', '').split()
+    'EXTRA_DRAIN_ARGS': os.getenv('EXTRA_DRAIN_ARGS', '').split(),
+    'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False))
 }
