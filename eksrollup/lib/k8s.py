@@ -7,7 +7,7 @@ from .logger import logger
 from eksrollup.config import app_config
 
 
-def get_k8s_nodes(exclude_node_label_key=app_config["EXCLUDE_NODE_LABEL_KEY"]):
+def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
     """
     Returns a list of kubernetes nodes
     """
@@ -23,10 +23,10 @@ def get_k8s_nodes(exclude_node_label_key=app_config["EXCLUDE_NODE_LABEL_KEY"]):
     k8s_api = client.CoreV1Api()
     logger.info("Getting k8s nodes...")
     response = k8s_api.list_node()
-    if exclude_node_label_key is not None:
+    if exclude_node_label_keys is not None:
         nodes = []
         for node in response.items:
-            if exclude_node_label_key not in node.metadata.labels:
+            if all(key not in node.metadata.labels for key in exclude_node_label_keys):
                 nodes.append(node)
         response.items = nodes
     logger.info("Current k8s node count is {}".format(len(response.items)))

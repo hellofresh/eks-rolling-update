@@ -103,6 +103,7 @@ eks_rolling_update.py -c my-eks-cluster
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
 | RUN_MODE                  | See Run Modes section below                                                                                           | 1                                        |
 | DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
+| EXCLUDE_NODE_LABEL_KEYS   | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | "spotinst.io/node-lifecycle" |
 | EXTRA_DRAIN_ARGS          | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
 | MAX_ALLOWABLE_NODE_AGE    | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node.      | 6                                          |
 
