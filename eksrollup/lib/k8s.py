@@ -161,7 +161,7 @@ def taint_node(node_name):
     k8s_api = client.CoreV1Api(client.ApiClient(configuration))
     logger.info("Adding taint to k8s node {}...".format(node_name))
     try:
-        taint = client.V1Taint(effect='NoSchedule', key= 'eks-rolling-update')
+        taint = client.V1Taint(effect='NoSchedule', key='eks-rolling-update')
         api_call_body = client.V1Node(spec=client.V1NodeSpec(taints=[taint]))
         if not app_config['DRY_RUN']:
             k8s_api.patch_node(node_name, api_call_body)
