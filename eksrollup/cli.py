@@ -7,7 +7,7 @@ from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
-    drain_node, delete_node, cordon_node
+    drain_node, delete_node, cordon_node, taint_node
 from .lib.exceptions import RollingUpdateException
 
 
@@ -154,10 +154,13 @@ def update_asgs(asgs, cluster_name):
                 try:
                     # get the k8s node name instead of instance id
                     node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                    cordon_node(node_name)
-                except Exception as cordon_exception:
-                    logger.error(f"Encountered an error when cordoning node {node_name}")
-                    logger.error(cordon_exception)
+                    if not app_config["TAINT_NODES"]:
+                        cordon_node(node_name)
+                    else:
+                        taint_node(node_name)
+                except Exception as exception:
+                    logger.error(f"Encountered an error when adding taint/ cordoning node {node_name}")
+                    logger.error(exception)
                     exit(1)
 
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
@@ -176,10 +179,13 @@ def update_asgs(asgs, cluster_name):
                 try:
                     # get the k8s node name instead of instance id
                     node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                    cordon_node(node_name)
-                except Exception as cordon_exception:
-                    logger.error(f"Encountered an error when cordoning node {node_name}")
-                    logger.error(cordon_exception)
+                    if not app_config["TAINT_NODES"]:
+                        cordon_node(node_name)
+                    else:
+                        taint_node(node_name)
+                except Exception as exception:
+                    logger.error(f"Encountered an error when when adding taint/ cordoning node {node_name}")
+                    logger.error(exception)
                     exit(1)
 
         if len(outdated_instances) != 0:
