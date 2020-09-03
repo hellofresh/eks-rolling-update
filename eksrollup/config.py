@@ -19,6 +19,7 @@ app_config = {
     'ASG_WAIT_FOR_DETACHMENT': str_to_bool(os.getenv('ASG_WAIT_FOR_DETACHMENT', True)),
     'ASG_USE_TERMINATION_POLICY': str_to_bool(os.getenv('ASG_USE_TERMINATION_POLICY', False)),
     'CLUSTER_HEALTH_WAIT': int(os.getenv('CLUSTER_HEALTH_WAIT', 90)),
+    'CLUSTER_HEALTH_RETRY': int(os.getenv('CLUSTER_HEALTH_RETRY', 1)),
     'GLOBAL_MAX_RETRY': int(os.getenv('GLOBAL_MAX_RETRY', 12)),
     'GLOBAL_HEALTH_WAIT': int(os.getenv('GLOBAL_HEALTH_WAIT', 20)),
     'BETWEEN_NODES_WAIT': int(os.getenv('BETWEEN_NODES_WAIT', 0)),

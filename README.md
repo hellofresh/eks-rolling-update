@@ -98,7 +98,8 @@ eks_rolling_update.py -c my-eks-cluster
 | ASG_WAIT_FOR_DETACHMENT   | If True, waits for detachment to fully complete (draining connections etc) after terminating instance and detaching   | True                                     |
 | ASG_USE_TERMINATION_POLICY| Use ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)      | False                                    |
 | CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                          | 90                                       |
-| GLOBAL_MAX_RETRY          | Number of attempts of a health check                                                                                  | 12                                       |
+| CLUSTER_HEALTH_RETRY      | Number of attempts to validate the health of the cluster after ASG has been scaled                                    | 1                                        |
+| GLOBAL_MAX_RETRY          | Number of attempts of a health or termination check                                                                   | 12                                       |
 | GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                              | 20                                       |
 | BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
 | RUN_MODE                  | See Run Modes section below                                                                                           | 1                                        |
