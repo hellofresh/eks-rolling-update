@@ -123,7 +123,7 @@ eks_rolling_update.py -c my-eks-cluster
 | EXCLUDE_NODE_LABEL_KEYS    | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | "spotinst.io/node-lifecycle" |
 | EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
 | MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
-| INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state instead of `terminated` or `stopped`       | False                                    |
+| INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
 
 ## Run Modes
 
