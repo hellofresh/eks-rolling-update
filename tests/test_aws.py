@@ -52,6 +52,9 @@ class TestAWS(unittest.TestCase):
         with open(f"{current_dir}/fixtures/aws_response_terminated.json", "r") as file:
             self.aws_response_mock_terminated = json.load(file)
 
+        with open(f"{current_dir}/fixtures/aws_response_shutting_down.json", "r") as file:
+            self.aws_response_mock_shutting_down = json.load(file)
+
     def test_get_asg_tag(self):
         tags = [
             {
@@ -138,6 +141,11 @@ class TestAWS(unittest.TestCase):
         with patch('eksrollup.lib.aws.ec2_client.describe_instances') as describe_instances_mock:
             describe_instances_mock.return_value = self.aws_response_mock_terminated
             self.assertTrue(instance_terminated(self.instance_id, 2, 1))
+
+    def test_instance_shutting_down(self):
+        with patch('eksrollup.lib.aws.ec2_client.describe_instances') as describe_instances_mock:
+            describe_instances_mock.return_value = self.aws_response_mock_shutting_down
+            self.assertTrue(instance_terminated(self.instance_id, 2, 1, True))
 
     def test_instance_terminated_fail(self):
         self.assertFalse(instance_terminated(self.instance_id, 2, 1))

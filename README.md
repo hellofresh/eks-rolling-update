@@ -102,29 +102,31 @@ eks_rolling_update.py -c my-eks-cluster
 
 ## Configuration
 
-| Environment Variable      | Description                                                                                                           | Default                                  |
-|---------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------------------|
-| K8S_AUTOSCALER_ENABLED    | If True Kubernetes Autoscaler will be paused before running update                                                    | False                                    |
-| K8S_AUTOSCALER_NAMESPACE  | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
-| K8S_AUTOSCALER_DEPLOYMENT | Deployment name of Kubernetes Autoscaler                                                                              | "cluster-autoscaler"                     |
-| K8S_AUTOSCALER_REPLICAS   | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                            | 2                                        |
-| ASG_DESIRED_STATE_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:desired_capacity      |
-| ASG_ORIG_CAPACITY_TAG     | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
-| ASG_ORIG_MAX_CAPACITY_TAG | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
-| ASG_WAIT_FOR_DETACHMENT   | If True, waits for detachment to fully complete (draining connections etc) after terminating instance and detaching   | True                                     |
-| ASG_USE_TERMINATION_POLICY| Use ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)      | False                                    |
-| CLUSTER_HEALTH_WAIT       | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                          | 90                                       |
-| CLUSTER_HEALTH_RETRY      | Number of attempts to validate the health of the cluster after ASG has been scaled                                    | 1                                        |
-| GLOBAL_MAX_RETRY          | Number of attempts of a health or termination check                                                                   | 12                                       |
-| GLOBAL_HEALTH_WAIT        | Number of seconds to wait before retrying a health check                                                              | 20                                       |
-| BETWEEN_NODES_WAIT        | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
-| RUN_MODE                  | See Run Modes section below                                                                                           | 1                                        |
-| DRY_RUN                   | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
-| EXCLUDE_NODE_LABEL_KEYS   | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | "spotinst.io/node-lifecycle" |
-| EXTRA_DRAIN_ARGS          | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
-| MAX_ALLOWABLE_NODE_AGE    | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node.      | 6                                          |
+| Environment Variable       | Description                                                                                                           | Default                                  |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| K8S_AUTOSCALER_ENABLED     | If True Kubernetes Autoscaler will be paused before running update                                                    | False                                    |
+| K8S_AUTOSCALER_NAMESPACE   | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
+| K8S_AUTOSCALER_DEPLOYMENT  | Deployment name of Kubernetes Autoscaler                                                                              | "cluster-autoscaler"                     |
+| K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                            | 2                                        |
+| ASG_DESIRED_STATE_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:desired_capacity      |
+| ASG_ORIG_CAPACITY_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
+| ASG_ORIG_MAX_CAPACITY_TAG  | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
+| ASG_WAIT_FOR_DETACHMENT    | If True, waits for detachment to fully complete (draining connections etc) after terminating instance and detaching   | True                                     |
+| ASG_USE_TERMINATION_POLICY | Use ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)      | False                                    |
+| CLUSTER_HEALTH_WAIT        | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                          | 90                                       |
+| CLUSTER_HEALTH_RETRY       | Number of attempts to validate the health of the cluster after ASG has been scaled                                    | 1                                        |
+| GLOBAL_MAX_RETRY           | Number of attempts of a health or termination check                                                                   | 12                                       |
+| GLOBAL_HEALTH_WAIT         | Number of seconds to wait before retrying a health check                                                              | 20                                       |
+| BETWEEN_NODES_WAIT         | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
+| RUN_MODE                   | See Run Modes section below                                                                                           | 1                                        |
+| DRY_RUN                    | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
+| EXCLUDE_NODE_LABEL_KEYS    | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | "spotinst.io/node-lifecycle" |
+| EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
+| MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
+| INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state instead of `terminated` or `stopped`       | False                                    |
 
 ## Run Modes
+
 There are a number of different values which can be set for the `RUN_MODE` environment variable.
 
 `1` is the default.
