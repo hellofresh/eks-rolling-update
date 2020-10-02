@@ -45,6 +45,22 @@ To achieve this, it performs the following actions:
 * `KUBECONFIG` environment variable set, or config available in `${HOME}/.kube/config` per default
 * AWS credentials [configured](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#guide-configuration)
 
+### IAM Requirements
+
+The following IAM permissions are required:
+
+```
+autoscaling:DescribeAutoScalingGroups
+autoscaling:TerminateInstanceInAutoScalingGroup
+autoscaling:SuspendProcesses
+autoscaling:ResumeProcesses
+autoscaling:UpdateAutoScalingGroup
+autoscaling:CreateOrUpdateTags
+autoscaling:DeleteTags
+ec2:DescribeLaunchTemplates
+ec2:DescribeInstance
+```
+
 <a name="installation"></a>
 ## Installation
 
@@ -158,7 +174,7 @@ $ unset K8S_AUTOSCALER_ENABLED
 
 * Configure tool via `.env` file
 
-Rather than using environment variables, you can use a `.env` file within your working directory to load 
+Rather than using environment variables, you can use a `.env` file within your working directory to load
 updater settings. e.g:
 
 ```
