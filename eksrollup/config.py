@@ -28,5 +28,6 @@ app_config = {
     'EXCLUDE_NODE_LABEL_KEYS': os.getenv('EXCLUDE_NODE_LABEL_KEYS', 'spotinst.io/node-lifecycle').split(),
     'EXTRA_DRAIN_ARGS': os.getenv('EXTRA_DRAIN_ARGS', '').split(),
     'MAX_ALLOWABLE_NODE_AGE': int(os.getenv('MAX_ALLOWABLE_NODE_AGE', 6)),
-    'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False))
+    'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False)),
+    'ASG_NAMES': os.getenv('ASG_NAMES', '').split()
 }
