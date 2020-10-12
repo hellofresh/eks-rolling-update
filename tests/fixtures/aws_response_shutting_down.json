@@ -1,0 +1,186 @@
+{
+    "Reservations": [
+        {
+            "Groups": [
+                {
+                    "GroupName": "string",
+                    "GroupId": "string"
+                }
+            ],
+            "Instances": [
+                {
+                    "AmiLaunchIndex": 123,
+                    "ImageId": "string",
+                    "InstanceId": "string",
+                    "InstanceType": "m5.large",
+                    "KernelId": "string",
+                    "KeyName": "string",
+                    "LaunchTime": "date",
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "Placement": {
+                        "AvailabilityZone": "string",
+                        "Affinity": "string",
+                        "GroupName": "string",
+                        "PartitionNumber": 123,
+                        "HostId": "string",
+                        "Tenancy": "default",
+                        "SpreadDomain": "string"
+                    },
+                    "Platform": "Windows",
+                    "PrivateDnsName": "string",
+                    "PrivateIpAddress": "string",
+                    "ProductCodes": [
+                        {
+                            "ProductCodeId": "string",
+                            "ProductCodeType": "marketplace"
+                        }
+                    ],
+                    "PublicDnsName": "string",
+                    "PublicIpAddress": "string",
+                    "RamdiskId": "string",
+                    "State": {
+                        "Code": 123,
+                        "Name": "shutting-down"
+                    },
+                    "StateTransitionReason": "string",
+                    "SubnetId": "string",
+                    "VpcId": "string",
+                    "Architecture": "x86_64",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "string",
+                            "Ebs": {
+                                "AttachTime": "date",
+                                "DeleteOnTermination": "true",
+                                "Status": "attached",
+                                "VolumeId": "string"
+                            }
+                        }
+                    ],
+                    "ClientToken": "string",
+                    "EbsOptimized": "true",
+                    "EnaSupport": "true",
+                    "Hypervisor": "xen",
+                    "IamInstanceProfile": {
+                        "Arn": "string",
+                        "Id": "string"
+                    },
+                    "InstanceLifecycle": "scheduled",
+                    "ElasticGpuAssociations": [
+                        {
+                            "ElasticGpuId": "string",
+                            "ElasticGpuAssociationId": "string",
+                            "ElasticGpuAssociationState": "string",
+                            "ElasticGpuAssociationTime": "string"
+                        }
+                    ],
+                    "ElasticInferenceAcceleratorAssociations": [
+                        {
+                            "ElasticInferenceAcceleratorArn": "string",
+                            "ElasticInferenceAcceleratorAssociationId": "string",
+                            "ElasticInferenceAcceleratorAssociationState": "string",
+                            "ElasticInferenceAcceleratorAssociationTime": "date"
+                        }
+                    ],
+                    "NetworkInterfaces": [
+                        {
+                            "Association": {
+                                "IpOwnerId": "string",
+                                "PublicDnsName": "string",
+                                "PublicIp": "string"
+                            },
+                            "Attachment": {
+                                "AttachTime": "date",
+                                "AttachmentId": "string",
+                                "DeleteOnTermination": "true",
+                                "DeviceIndex": 123,
+                                "Status": "attached"
+                            },
+                            "Description": "string",
+                            "Groups": [
+                                {
+                                    "GroupName": "string",
+                                    "GroupId": "string"
+                                }
+                            ],
+                            "Ipv6Addresses": [
+                                {
+                                    "Ipv6Address": "string"
+                                }
+                            ],
+                            "MacAddress": "string",
+                            "NetworkInterfaceId": "string",
+                            "OwnerId": "string",
+                            "PrivateDnsName": "string",
+                            "PrivateIpAddress": "string",
+                            "PrivateIpAddresses": [
+                                {
+                                    "Association": {
+                                        "IpOwnerId": "string",
+                                        "PublicDnsName": "string",
+                                        "PublicIp": "string"
+                                    },
+                                    "Primary": "true",
+                                    "PrivateDnsName": "string",
+                                    "PrivateIpAddress": "string"
+                                }
+                            ],
+                            "SourceDestCheck": "true",
+                            "Status": "available",
+                            "SubnetId": "string",
+                            "VpcId": "string",
+                            "InterfaceType": "string"
+                        }
+                    ],
+                    "RootDeviceName": "string",
+                    "RootDeviceType": "ebs",
+                    "SecurityGroups": [
+                        {
+                            "GroupName": "string",
+                            "GroupId": "string"
+                        }
+                    ],
+                    "SourceDestCheck": "true",
+                    "SpotInstanceRequestId": "string",
+                    "SriovNetSupport": "string",
+                    "StateReason": {
+                        "Code": "string",
+                        "Message": "string"
+                    },
+                    "Tags": [
+                        {
+                            "Key": "string",
+                            "Value": "string"
+                        }
+                    ],
+                    "VirtualizationType": "hvm",
+                    "CpuOptions": {
+                        "CoreCount": 123,
+                        "ThreadsPerCore": 123
+                    },
+                    "CapacityReservationId": "string",
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "none",
+                        "CapacityReservationTarget": {
+                            "CapacityReservationId": "string"
+                        }
+                    },
+                    "HibernationOptions": {
+                        "Configured": "true"
+                    },
+                    "Licenses": [
+                        {
+                            "LicenseConfigurationArn": "string"
+                        }
+                    ]
+                }
+            ],
+            "OwnerId": "string",
+            "RequesterId": "string",
+            "ReservationId": "string"
+        }
+    ],
+    "NextToken": "string"
+}

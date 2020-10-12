@@ -288,9 +288,11 @@ def instance_outdated_age(instance_id, days_fresh):
         return False
 
 
-def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
+def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT'],
+                        wait_for_stopping=app_config['INSTANCE_WAIT_FOR_STOPPING']):
     """
     Checks that an ec2 instance is terminated or stopped given an InstanceID
+    Overridable to detect shutting-down or stopped states
     """
     retry_count = 1
     is_instance_terminated = False
@@ -302,13 +304,16 @@ def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], w
         )
         state = response['Reservations'][0]['Instances'][0]['State']
         stop_states = ['terminated', 'stopped']
-        if state['Name'] not in stop_states:
-            is_instance_terminated = False
-            logger.info('Instance {} is still running, checking again...'.format(instance_id))
-        else:
-            logger.info('Instance {} terminated!'.format(instance_id))
+        stopping_states = ['shutting-down', 'stopping']
+
+        if state['Name'] in stop_states or (wait_for_stopping and state['Name'] in stopping_states):
+            logger.info('Instance {} {}!'.format(instance_id, state['Name']))
             is_instance_terminated = True
             break
+        else:
+            is_instance_terminated = False
+            logger.info('Instance {} is {}, checking again...'.format(instance_id, state['Name']))
+
         time.sleep(wait)
     return is_instance_terminated
 
