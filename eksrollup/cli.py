@@ -59,11 +59,14 @@ def scale_up_asg(cluster_name, asg, count):
     desired_capacity = asg_old_desired_capacity + count
     asg_tags = asg['Tags']
     asg_name = asg['AutoScalingGroupName']
+    current_capacity = None
 
     # remove any stale suspensions from asg that may be present
     modify_aws_autoscaling(asg_name, "resume")
 
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
+    batch_size = app_config['BATCH_SIZE']
+
     asg_tag_desired_capacity = get_asg_tag(asg_tags, app_config["ASG_DESIRED_STATE_TAG"])
     asg_tag_orig_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_CAPACITY_TAG"])
     asg_tag_orig_max_capacity = get_asg_tag(asg_tags, app_config["ASG_ORIG_MAX_CAPACITY_TAG"])
@@ -106,22 +109,40 @@ def scale_up_asg(cluster_name, asg, count):
         save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_capacity)
         save_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"], asg_old_max_size)
 
-        # only change the max size if the new capacity is bigger than current max
-        if desired_capacity > asg_old_max_size:
-            scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, desired_capacity)
-        else:
-            scale_asg(asg_name, asg_old_desired_capacity, desired_capacity, asg_old_max_size)
+        old_desired_capacity = asg_old_desired_capacity
 
-        # check cluster health before doing anything
-        validate_cluster_health(
-            asg_name,
-            desired_capacity,
-            cluster_name,
-            predictive,
-            health_check_type="asg"
-        )
+        while True:
+            asg_instance_count = count_all_cluster_instances(cluster_name, predictive=predictive)
+            if asg_instance_count != desired_capacity:
+                if batch_size:
+                    if current_capacity is None:
+                        current_capacity = old_desired_capacity
+                    else:
+                        old_desired_capacity = current_capacity
+                    current_capacity += batch_size
+                    if current_capacity >= desired_capacity:
+                        current_capacity = desired_capacity
+                else:
+                    current_capacity = desired_capacity
 
-        return desired_capacity, asg_old_desired_capacity, asg_old_max_size
+            # only change the max size if the new capacity is bigger than current max
+            if current_capacity > asg_old_max_size:
+                scale_asg(asg_name, old_desired_capacity, current_capacity, current_capacity)
+            else:
+                scale_asg(asg_name, old_desired_capacity, current_capacity, asg_old_max_size)
+
+            # check cluster health before doing anything
+            validate_cluster_health(
+                asg_name,
+                current_capacity,
+                cluster_name,
+                predictive,
+                health_check_type="asg"
+            )
+            if current_capacity == desired_capacity:
+                break
+    logger.info('Proceeding with node draining and termination...')
+    return desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
 
 def update_asgs(asgs, cluster_name):

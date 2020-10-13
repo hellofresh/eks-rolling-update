@@ -18,6 +18,7 @@ app_config = {
     'ASG_ORIG_MAX_CAPACITY_TAG': os.getenv('ASG_ORIG_MAX_CAPACITY_TAG', 'eks-rolling-update:original_max_capacity'),
     'ASG_WAIT_FOR_DETACHMENT': str_to_bool(os.getenv('ASG_WAIT_FOR_DETACHMENT', True)),
     'ASG_USE_TERMINATION_POLICY': str_to_bool(os.getenv('ASG_USE_TERMINATION_POLICY', False)),
+    'INSTANCE_WAIT_FOR_STOPPING': str_to_bool(os.getenv('INSTANCE_WAIT_FOR_STOPPING', False)),
     'CLUSTER_HEALTH_WAIT': int(os.getenv('CLUSTER_HEALTH_WAIT', 90)),
     'CLUSTER_HEALTH_RETRY': int(os.getenv('CLUSTER_HEALTH_RETRY', 1)),
     'GLOBAL_MAX_RETRY': int(os.getenv('GLOBAL_MAX_RETRY', 12)),
@@ -28,5 +29,7 @@ app_config = {
     'EXCLUDE_NODE_LABEL_KEYS': os.getenv('EXCLUDE_NODE_LABEL_KEYS', 'spotinst.io/node-lifecycle').split(),
     'EXTRA_DRAIN_ARGS': os.getenv('EXTRA_DRAIN_ARGS', '').split(),
     'MAX_ALLOWABLE_NODE_AGE': int(os.getenv('MAX_ALLOWABLE_NODE_AGE', 6)),
-    'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False))
+    'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False)),
+    'BATCH_SIZE': int(os.getenv('BATCH_SIZE', 0)),
+    'ASG_NAMES': os.getenv('ASG_NAMES', '').split()
 }
