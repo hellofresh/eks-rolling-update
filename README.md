@@ -124,6 +124,7 @@ eks_rolling_update.py -c my-eks-cluster
 | EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
 | MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
 | INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
+| BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
 
 ## Run Modes
 
@@ -143,6 +144,22 @@ Each of them have different advantages and disadvantages.
 * Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
 * Only cordoning the nodes on a per-ASG basis will mean that pods are likely to be moved more than once
 * Cordoning the nodes for all ASGs at once could cause issues if new pods needs to start during the process
+
+## Batching
+
+EKS Rolling Update can batch scale-out the ASG to progressively reach the desired instance count before it begins
+draining the nodes.
+
+This is intended for use in cases where a large ASG scale-out may result in instances failing to register with
+EKS. Such a scenario is more likely to occur with larger ASGs where (for example) a 100 instance ASG may be asked
+to scale to 200 (temporarily). Users may find that some instances never register, and this causes EKS Rolling
+Update to hang indefinitely waiting for the registered EKS node count to match the instance count.
+
+If this happens, you may want to consider batching.
+
+For example, if the ASG will be scaled from 100 instances to 200 instances, specifying a batch size of 10 will
+result in the ASG first scaling to 110, then 120, 130, etc instances until 200 is reached. Once the desired
+count is reached, the tool will proceed with the normal draining/scale-in operations.
 
 ## Examples
 
