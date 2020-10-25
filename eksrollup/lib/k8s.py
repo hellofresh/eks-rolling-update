@@ -7,11 +7,7 @@ from .logger import logger
 from eksrollup.config import app_config
 
 
-def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
-    """
-    Returns a list of kubernetes nodes
-    """
-
+def ensure_config_loaded():
     try:
         config.load_incluster_config()
     except config.ConfigException:
@@ -19,6 +15,13 @@ def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"])
             config.load_kube_config()
         except config.ConfigException:
             raise Exception("Could not configure kubernetes python client")
+
+
+def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
+    """
+    Returns a list of kubernetes nodes
+    """
+    ensure_config_loaded()
 
     k8s_api = client.CoreV1Api()
     logger.info("Getting k8s nodes...")
@@ -55,18 +58,11 @@ def modify_k8s_autoscaler(action):
     Pauses or resumes the Kubernetes autoscaler
     """
 
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
-        try:
-            config.load_kube_config()
-        except config.ConfigException:
-            raise Exception("Could not configure kubernetes python client")
+    ensure_config_loaded()
 
     # Configure API key authorization: BearerToken
-    configuration = client.Configuration()
     # create an instance of the API class
-    k8s_api = client.AppsV1Api(client.ApiClient(configuration))
+    k8s_api = client.AppsV1Api()
     if action == 'pause':
         logger.info('Pausing k8s autoscaler...')
         body = {'spec': {'replicas': 0}}
@@ -93,17 +89,10 @@ def delete_node(node_name):
     Deletes a kubernetes node from the cluster
     """
 
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
-        try:
-            config.load_kube_config()
-        except config.ConfigException:
-            raise Exception("Could not configure kubernetes python client")
+    ensure_config_loaded()
 
-    configuration = client.Configuration()
     # create an instance of the API class
-    k8s_api = client.CoreV1Api(client.ApiClient(configuration))
+    k8s_api = client.CoreV1Api()
     logger.info("Deleting k8s node {}...".format(node_name))
     try:
         if not app_config['DRY_RUN']:
@@ -120,17 +109,10 @@ def cordon_node(node_name):
     Cordon a kubernetes node to avoid new pods being scheduled on it
     """
 
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
-        try:
-            config.load_kube_config()
-        except config.ConfigException:
-            raise Exception("Could not configure kubernetes python client")
+    ensure_config_loaded()
 
-    configuration = client.Configuration()
     # create an instance of the API class
-    k8s_api = client.CoreV1Api(client.ApiClient(configuration))
+    k8s_api = client.CoreV1Api()
     logger.info("Cordoning k8s node {}...".format(node_name))
     try:
         api_call_body = client.V1Node(spec=client.V1NodeSpec(unschedulable=True))
@@ -148,17 +130,9 @@ def taint_node(node_name):
     Taint a kubernetes node to avoid new pods being scheduled on it
     """
 
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
-        try:
-            config.load_kube_config()
-        except config.ConfigException:
-            raise Exception("Could not configure kubernetes python client")
+    ensure_config_loaded()
 
-    configuration = client.Configuration()
-    # create an instance of the API class
-    k8s_api = client.CoreV1Api(client.ApiClient(configuration))
+    k8s_api = client.CoreV1Api()
     logger.info("Adding taint to k8s node {}...".format(node_name))
     try:
         taint = client.V1Taint(effect='NoSchedule', key='eks-rolling-update')
