@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Config
+current-context: example-context
+clusters:
+  - cluster:
+      server: https://localhost:8080
+    name: local-cluster
+contexts:
+  - context:
+      cluster: local-cluster
+      namespace: default
+      user: user
+    name: example-context
+users:
+  - name: user
+    user:
+      username: user
+      password: password

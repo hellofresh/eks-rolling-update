@@ -1,5 +1,6 @@
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+import os
 import subprocess
 import time
 import sys
@@ -15,6 +16,11 @@ def ensure_config_loaded():
             config.load_kube_config()
         except config.ConfigException:
             raise Exception("Could not configure kubernetes python client")
+
+    proxy_url = os.getenv('HTTPS_PROXY', os.getenv('HTTP_PROXY', None))
+    if proxy_url:
+        logger.info(f"Setting proxy: {proxy_url}")
+        client.Configuration._default.proxy = proxy_url
 
 
 def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
