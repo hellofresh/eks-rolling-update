@@ -180,7 +180,7 @@ def update_asgs(asgs, cluster_name):
                     else:
                         taint_node(node_name)
                 except Exception as exception:
-                    logger.error(f"Encountered an error when adding taint/ cordoning node {node_name}")
+                    logger.error(f"Encountered an error when adding taint/cordoning node {node_name}")
                     logger.error(exception)
                     exit(1)
 
@@ -205,7 +205,7 @@ def update_asgs(asgs, cluster_name):
                     else:
                         taint_node(node_name)
                 except Exception as exception:
-                    logger.error(f"Encountered an error when when adding taint/ cordoning node {node_name}")
+                    logger.error(f"Encountered an error when adding taint/cordoning node {node_name}")
                     logger.error(exception)
                     exit(1)
 

@@ -1,10 +1,11 @@
 import os
 import unittest
 import json
-from eksrollup.lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id
+from eksrollup.lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id, ensure_config_loaded
 from unittest.mock import patch
 from box import Box
-
+from kubernetes.client import ApiClient
+from kubernetes.config import kube_config
 
 class TestK8S(unittest.TestCase):
 
@@ -16,6 +17,23 @@ class TestK8S(unittest.TestCase):
 
         with open(f"{current_dir}/fixtures/k8s_response_unhealthy.json", "r") as file:
             self.k8s_response_mock_unhealthy = json.load(file)
+
+        kube_config.KUBE_CONFIG_DEFAULT_LOCATION = f"{current_dir}/fixtures/example-kube-config.yaml"
+        print(f"Using test kube config at {kube_config.KUBE_CONFIG_DEFAULT_LOCATION}")
+
+    def test_ensure_config_loaded_proxy_default(self):
+        ensure_config_loaded()
+        self.assertEqual(None, ApiClient().configuration.proxy)
+
+    def test_ensure_config_loaded_proxy_prefers_https(self):
+        with patch.dict(os.environ, {'HTTPS_PROXY': 'http://localhost:12345', 'HTTP_PROXY': 'http://localhost:6789'}):
+            ensure_config_loaded()
+            self.assertEqual('http://localhost:12345', ApiClient().configuration.proxy)
+
+    def test_ensure_config_loaded_proxy_fallback_to_http(self):
+        with patch.dict(os.environ, {'HTTP_PROXY': 'http://localhost:12345'}):
+            ensure_config_loaded()
+            self.assertEqual('http://localhost:12345', ApiClient().configuration.proxy)
 
     def test_k8s_node_count(self):
         with patch('eksrollup.lib.k8s.get_k8s_nodes') as get_k8s_nodes_mock:
