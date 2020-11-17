@@ -35,6 +35,12 @@ class TestK8S(unittest.TestCase):
             ensure_config_loaded()
             self.assertEqual('http://localhost:12345', ApiClient().configuration.proxy)
 
+    def test_ensure_config_loaded_proxy_not_set_when_no_k8s_set(self):
+        with patch.dict(os.environ, {'N0_K8S_PROXY_PASS': 'true', 'HTTP_PROXY': 'http://localhost:6789'}):
+            ensure_config_loaded()
+            self.assertNotEqual('http://localhost:6789', ApiClient().configuration.proxy)
+
+
     def test_k8s_node_count(self):
         with patch('eksrollup.lib.k8s.get_k8s_nodes') as get_k8s_nodes_mock:
             get_k8s_nodes_mock.return_value = self.k8s_response_mock['items']
