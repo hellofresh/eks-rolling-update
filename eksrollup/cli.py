@@ -113,18 +113,17 @@ def scale_up_asg(cluster_name, asg, count):
 
         while True:
             asg_instance_count = count_all_cluster_instances(cluster_name, predictive=predictive)
-            if asg_instance_count != desired_capacity:
-                if batch_size:
-                    if current_capacity is None:
-                        current_capacity = old_desired_capacity
-                    else:
-                        old_desired_capacity = current_capacity
-                    current_capacity += batch_size
-                    if current_capacity >= desired_capacity:
-                        current_capacity = desired_capacity
+            if asg_instance_count != desired_capacity and batch_size:
+                if current_capacity is None:
+                    current_capacity = old_desired_capacity
                 else:
+                    old_desired_capacity = current_capacity
+                current_capacity += batch_size
+                if current_capacity >= desired_capacity:
                     current_capacity = desired_capacity
-
+            else:
+                current_capacity = desired_capacity
+            
             # only change the max size if the new capacity is bigger than current max
             if current_capacity > asg_old_max_size:
                 scale_asg(asg_name, old_desired_capacity, current_capacity, current_capacity)
