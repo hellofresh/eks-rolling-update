@@ -31,5 +31,6 @@ app_config = {
     'MAX_ALLOWABLE_NODE_AGE': int(os.getenv('MAX_ALLOWABLE_NODE_AGE', 6)),
     'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False)),
     'BATCH_SIZE': int(os.getenv('BATCH_SIZE', 0)),
+    'ENFORCED_DRAINING': str_to_bool(os.getenv('ENFORCED_DRAINING', False)),
     'ASG_NAMES': os.getenv('ASG_NAMES', '').split()
 }

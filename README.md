@@ -125,7 +125,8 @@ eks_rolling_update.py -c my-eks-cluster
 | MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
 | INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
 | BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
-| ASG_NAMES                 | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
+| ENFORCED_DRAINING          | If draining failed for a node due to corrupted podDisruptionBudgets or failing pods retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments**. | False |
+| ASG_NAMES                  | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
 
 ## Run Modes
 
