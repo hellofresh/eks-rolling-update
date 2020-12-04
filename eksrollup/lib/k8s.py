@@ -13,7 +13,7 @@ def ensure_config_loaded():
         config.load_incluster_config()
     except config.ConfigException:
         try:
-            config.load_kube_config()
+            config.load_kube_config(context=app_config['K8S_CONTEXT'])
         except config.ConfigException:
             raise Exception("Could not configure kubernetes python client")
 

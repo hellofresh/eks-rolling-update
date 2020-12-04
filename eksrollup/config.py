@@ -13,6 +13,7 @@ app_config = {
     'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE', 'default'),
     'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT', 'cluster-autoscaler'),
     'K8S_AUTOSCALER_REPLICAS': int(os.getenv('K8S_AUTOSCALER_REPLICAS', 2)),
+    'K8S_CONTEXT': os.getenv('K8S_CONTEXT', None),
     'ASG_DESIRED_STATE_TAG': os.getenv('ASG_DESIRED_STATE_TAG', 'eks-rolling-update:desired_capacity'),
     'ASG_ORIG_CAPACITY_TAG': os.getenv('ASG_ORIG_CAPACITY_TAG', 'eks-rolling-update:original_capacity'),
     'ASG_ORIG_MAX_CAPACITY_TAG': os.getenv('ASG_ORIG_MAX_CAPACITY_TAG', 'eks-rolling-update:original_max_capacity'),
