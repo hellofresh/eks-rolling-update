@@ -171,9 +171,19 @@ def drain_node(node_name):
     logger.info('Draining worker node with {}...'.format(' '.join(kubectl_args)))
     result = subprocess.run(kubectl_args)
 
-    # If returncode is non-zero, raise a CalledProcessError.
+    # If returncode is non-zero run enforced draining of the node or raise a CalledProcessError.
     if result.returncode != 0:
-        raise Exception("Node not drained properly. Exiting")
+        if app_config['ENFORCED_DRAINING'] is True:
+            kubectl_args += [
+                '--disable-eviction=true',
+                '--force=true'
+            ]
+            logger.info('There was an error draining the worker node, proceed with enforced draining ({})...'.format(' '.join(kubectl_args)))
+            enforced_result = subprocess.run(kubectl_args)
+            if enforced_result.returncode != 0:
+                raise Exception("Node not drained properly with enforced draining enabled. Exiting")
+        else:
+            raise Exception("Node not drained properly. Exiting")
 
 
 def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
