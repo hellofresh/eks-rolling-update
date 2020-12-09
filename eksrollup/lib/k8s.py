@@ -18,9 +18,9 @@ def ensure_config_loaded():
             raise Exception("Could not configure kubernetes python client")
 
     proxy_url = os.getenv('HTTPS_PROXY', os.getenv('HTTP_PROXY', None))
-    no_k8s_proxy_pass = os.getenv('N0_K8S_PROXY_PASS')
+    k8s_proxy_bypass = os.getenv('K8S_PROXY_BYPASS')
 
-    if proxy_url and no_k8s_proxy_pass != "true":
+    if proxy_url and k8s_proxy_bypass != "true":
         logger.info(f"Setting proxy: {proxy_url}")
         client.Configuration._default.proxy = proxy_url
 

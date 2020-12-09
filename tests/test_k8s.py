@@ -36,7 +36,7 @@ class TestK8S(unittest.TestCase):
             self.assertEqual('http://localhost:12345', ApiClient().configuration.proxy)
 
     def test_ensure_config_loaded_proxy_not_set_when_no_k8s_set(self):
-        with patch.dict(os.environ, {'N0_K8S_PROXY_PASS': 'true', 'HTTP_PROXY': 'http://localhost:6789'}):
+        with patch.dict(os.environ, {'K8S_PROXY_BYPASS': 'true', 'HTTP_PROXY': 'http://localhost:6789'}):
             ensure_config_loaded()
             self.assertNotEqual('http://localhost:6789', ApiClient().configuration.proxy)
 
