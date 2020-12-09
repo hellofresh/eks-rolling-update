@@ -108,6 +108,7 @@ eks_rolling_update.py -c my-eks-cluster
 | K8S_AUTOSCALER_NAMESPACE   | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
 | K8S_AUTOSCALER_DEPLOYMENT  | Deployment name of Kubernetes Autoscaler                                                                              | "cluster-autoscaler"                     |
 | K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                            | 2                                        |
+| K8S_CONTEXT                | Context from the Kubernetes config to use. If this is left undefined the `current-context` is used                    | None                                     |
 | ASG_DESIRED_STATE_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:desired_capacity      |
 | ASG_ORIG_CAPACITY_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
 | ASG_ORIG_MAX_CAPACITY_TAG  | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
@@ -125,9 +126,9 @@ eks_rolling_update.py -c my-eks-cluster
 | MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
 | INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
 | BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
-| ASG_NAMES                 | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
+| ENFORCED_DRAINING          | If draining failed for a node due to corrupted podDisruptionBudgets or failing pods retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments** since this will bypass checking PodDisruptionBudgets | False |
+| ASG_NAMES                  | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
 | K8S_PROXY_BYPASS          | If set to `true` then connectivity to kube cluster doesnt use `HTTP_PROXY` or `HTTPS_PROXY` environment variables but boto would still connect adhere to these environment variables. | "" |
-
 ## Run Modes
 
 There are a number of different values which can be set for the `RUN_MODE` environment variable.
