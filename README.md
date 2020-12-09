@@ -126,6 +126,7 @@ eks_rolling_update.py -c my-eks-cluster
 | INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
 | BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
 | ASG_NAMES                 | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
+| K8S_PROXY_BYPASS          | If set to `true` then connectivity to kube cluster doesnt use `HTTP_PROXY` or `HTTPS_PROXY` environment variables but boto would still connect adhere to these environment variables. | "" |
 
 ## Run Modes
 
