@@ -128,7 +128,7 @@ eks_rolling_update.py -c my-eks-cluster
 | BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
 | ENFORCED_DRAINING          | If draining failed for a node due to corrupted podDisruptionBudgets or failing pods retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments** since this will bypass checking PodDisruptionBudgets | False |
 | ASG_NAMES                  | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
-
+| K8S_PROXY_BYPASS          | If set to `true` then connectivity to kube cluster doesnt use `HTTP_PROXY` or `HTTPS_PROXY` environment variables but boto would still connect adhere to these environment variables. | "" |
 ## Run Modes
 
 There are a number of different values which can be set for the `RUN_MODE` environment variable.
