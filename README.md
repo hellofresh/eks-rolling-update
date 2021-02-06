@@ -102,46 +102,58 @@ eks_rolling_update.py -c my-eks-cluster
 
 ## Configuration
 
-| Environment Variable       | Description                                                                                                           | Default                                  |
-|----------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------------------|
-| K8S_AUTOSCALER_ENABLED     | If True Kubernetes Autoscaler will be paused before running update                                                    | False                                    |
-| K8S_AUTOSCALER_NAMESPACE   | Namespace where Kubernetes Autoscaler is deployed                                                                     | "default"                                |
-| K8S_AUTOSCALER_DEPLOYMENT  | Deployment name of Kubernetes Autoscaler                                                                              | "cluster-autoscaler"                     |
-| K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                            | 2                                        |
-| K8S_CONTEXT                | Context from the Kubernetes config to use. If this is left undefined the `current-context` is used                    | None                                     |
-| ASG_DESIRED_STATE_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:desired_capacity      |
-| ASG_ORIG_CAPACITY_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_capacity     |
-| ASG_ORIG_MAX_CAPACITY_TAG  | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                    | eks-rolling-update:original_max_capacity |
-| ASG_WAIT_FOR_DETACHMENT    | If True, waits for detachment to fully complete (draining connections etc) after terminating instance and detaching   | True                                     |
-| ASG_USE_TERMINATION_POLICY | Use ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)      | False                                    |
-| CLUSTER_HEALTH_WAIT        | Number of seconds to wait after ASG has been scaled up before checking health of the cluster                          | 90                                       |
-| CLUSTER_HEALTH_RETRY       | Number of attempts to validate the health of the cluster after ASG has been scaled                                    | 1                                        |
-| GLOBAL_MAX_RETRY           | Number of attempts of a health or termination check                                                                   | 12                                       |
-| GLOBAL_HEALTH_WAIT         | Number of seconds to wait before retrying a health check                                                              | 20                                       |
-| BETWEEN_NODES_WAIT         | Number of seconds to wait after removing a node before continuing on                                                  | 0                                        |
-| RUN_MODE                   | See Run Modes section below                                                                                           | 1                                        |
-| DRY_RUN                    | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False                                    |
-| EXCLUDE_NODE_LABEL_KEYS    | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | "spotinst.io/node-lifecycle" |
-| EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h` | ""                                       |
-| MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node    | 6                                        |
-| INSTANCE_WAIT_FOR_STOPPING | Wait for terminated instances to be in `stopping` or `shutting-down` state as well as `terminated` or `stopped`       | False                                    |
-| BATCH_SIZE                 | Instances to scale the ASG by at a time. When set to 0, batching is disabled.                                         | 0                                        |
-| ENFORCED_DRAINING          | If draining failed for a node due to corrupted podDisruptionBudgets or failing pods retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments** since this will bypass checking PodDisruptionBudgets | False |
+### Core Configuration
+
+| Environment Variable       | Description                                                                                                           | Default |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------|---------|
+| RUN_MODE                   | Overall strategy for handling multiple ASGs & identifying nodes to roll. See [Run Modes](#run-modes) section below    | 1       |
+| DRY_RUN                    | If True, only a query will be run to determine which worker nodes are outdated without running an update operation    | False   |
+| CLUSTER_HEALTH_WAIT        | Number of seconds to wait after ASG has been scaled up before checking health of nodes with the cluster               | 90      |
+| CLUSTER_HEALTH_RETRY       | Number of attempts to validate the health of the cluster after ASG has been scaled                                    | 1       |
+| GLOBAL_MAX_RETRY           | Number of attempts of a node health or instance termination check                                                     | 12      |
+| GLOBAL_HEALTH_WAIT         | Number of seconds to wait before retrying a health node health or instance termination check                          | 20      |
+| BETWEEN_NODES_WAIT         | Number of seconds to wait after removing a node before continuing on                                                  | 0       |
+
+### ASG & Node-Related Controls
+
+| Environment Variable       | Description                                                                                                                 | Default                                  |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| ASG_DESIRED_STATE_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                          | eks-rolling-update:desired_capacity      |
+| ASG_ORIG_CAPACITY_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                          | eks-rolling-update:original_capacity     |
+| ASG_ORIG_MAX_CAPACITY_TAG  | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                          | eks-rolling-update:original_max_capacity |
 | ASG_NAMES                  | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
-| K8S_PROXY_BYPASS          | If set to `true` then connectivity to kube cluster doesnt use `HTTP_PROXY` or `HTTPS_PROXY` environment variables but boto would still connect adhere to these environment variables. | "" |
+| BATCH_SIZE                 | # of instances to scale the ASG by at a time. When set to 0, batching is disabled. See [Batching](#batching) section        | 0                                        |
+| MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node          | 6                                        |
+| EXCLUDE_NODE_LABEL_KEYS    | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | spotinst.io/node-lifecycle |
+| ASG_USE_TERMINATION_POLICY | Prefer ASG termination policy (instance terminate/detach handled by ASG according to configured termination policy)         | False                                    |
+| INSTANCE_WAIT_FOR_STOPPING | Only wait for terminated instances to be in `stopping` or `shutting-down` state, instead of fully `terminated` or `stopped` | False                                    |
+
+### K8S Node & Pod Controls
+
+| Environment Variable       | Description                                                                                                                | Default                                  |
+|----------------------------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| K8S_AUTOSCALER_ENABLED     | If True Kubernetes Autoscaler will be paused before running update                                                         | False                                    |
+| K8S_AUTOSCALER_NAMESPACE   | Namespace where Kubernetes Autoscaler is deployed                                                                          | default                                  |
+| K8S_AUTOSCALER_DEPLOYMENT  | Deployment name of Kubernetes Autoscaler                                                                                   | cluster-autoscaler                       |
+| K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                                 | 2                                        |
+| K8S_CONTEXT                | Context from the Kubernetes config to use. If this is left undefined the `current-context` is used                         | None                                     |
+| K8S_PROXY_BYPASS           | Set to `true` to ignore `HTTPS_PROXY` and `HTTP_PROXY` and disable use of any configured proxy when talking to the K8S API | False                                    |
+| TAINT_NODES                | Replace the default **cordon**-before-drain strategy with `NoSchedule` **taint**ing, as a workaround for K8S < `1.19` [prematurely removing cordoned nodes](https://github.com/kubernetes/kubernetes/issues/65013) from `Service`-managed `LoadBalancer`s | False |
+| EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h`      | ""                                       |
+| ENFORCED_DRAINING          | If draining fails for a node due to corrupted `PodDisruptionBudget`s or failing pods, retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments** since this will bypass checking `PodDisruptionBudget`s | False |
+
 ## Run Modes
 
 There are a number of different values which can be set for the `RUN_MODE` environment variable.
 
 `1` is the default.
 
-| Mode Number   | Description                                                                                     |
-|---------------|-------------------------------------------------------------------------------------------------|
-| 1             | Scale up and cordon the outdated nodes of each ASG one-by-one, just before we drain them.       |
-| 2             | Scale up and cordon the outdated nodes of all ASGs all at once at the beginning of the run.     |
-| 3             | Cordon the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.|
+| Mode Number   | Description                                                                                                           |
+|---------------|-----------------------------------------------------------------------------------------------------------------------|
+| 1             | Scale up and cordon/taint the outdated nodes of each ASG one-by-one, just before we drain them.                       |
+| 2             | Scale up and cordon/taint the outdated nodes of all ASGs all at once at the beginning of the run.                     |
+| 3             | Cordon/taint the outdated nodes of all ASGs at the beginning of the run but scale each ASG one-by-one.                |
 | 4             | Roll EKS nodes based on age instead of launch config (works with `MAX_ALLOWABLE_NODE_AGE` with default 6 days value). |
-
 
 Each of them have different advantages and disadvantages.
 * Scaling up all ASGs at once may cause AWS EC2 instance limits to be exceeded
@@ -183,9 +195,9 @@ $ python eks_rolling_update.py --cluster_name YOUR_EKS_CLUSTER_NAME
 If using `cluster-autoscaler`, you must let `eks-rolling-update` know that cluster-autoscaler is running in your cluster by exporting the following environment variables:
 
 ```
-$ export  K8S_AUTOSCALER_ENABLED=1 \
-          K8S_AUTOSCALER_NAMESPACE="CA_NAMESPACE" \
-          K8S_AUTOSCALER_DEPLOYMENT="CA_DEPLOYMENT_NAME"
+$ export  K8S_AUTOSCALER_ENABLED=true \
+          K8S_AUTOSCALER_NAMESPACE="${CA_NAMESPACE}" \
+          K8S_AUTOSCALER_DEPLOYMENT="${CA_DEPLOYMENT_NAME}"
 ```
 
 * Disable operations on `cluster-autoscaler`
