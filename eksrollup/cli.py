@@ -56,7 +56,7 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, cluster_name, pr
 def scale_up_asg(cluster_name, asg, count):
     asg_old_max_size = asg['MaxSize']
     asg_old_desired_capacity = asg['DesiredCapacity']
-    desired_capacity = asg_old_desired_capacity + count
+    desired_capacity = asg_old_desired_capacity + count + app_config['ASG_BUFFER_INSTANCES']
     asg_tags = asg['Tags']
     asg_name = asg['AutoScalingGroupName']
     current_capacity = None

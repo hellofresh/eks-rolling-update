@@ -122,6 +122,7 @@ eks_rolling_update.py -c my-eks-cluster
 | ASG_ORIG_CAPACITY_TAG      | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                          | eks-rolling-update:original_capacity     |
 | ASG_ORIG_MAX_CAPACITY_TAG  | Temporary tag which will be saved to the ASG to store the state of the EKS cluster prior to update                          | eks-rolling-update:original_max_capacity |
 | ASG_NAMES                  | List of space-delimited ASG names. Out of ASGs attached to the cluster, only these will be processed for rolling update. If this is left empty all ASGs of the cluster will be processed. | "" |
+| ASG_BUFFER_INSTANCES       | # of instances to overprovision the ASG by to allow workloads to scale out and soft affinity/anti-affinity rules to be respected | 0                                        | 
 | BATCH_SIZE                 | # of instances to scale the ASG by at a time. When set to 0, batching is disabled. See [Batching](#batching) section        | 0                                        |
 | MAX_ALLOWABLE_NODE_AGE     | The max age each node allowed to be. This works with `RUN_MODE` 4 as node rolling is updating based on age of node          | 6                                        |
 | EXCLUDE_NODE_LABEL_KEYS    | List of space-delimited keys for node labels. Nodes with a label using one of these keys will be excluded from the node count when scaling the cluster. | spotinst.io/node-lifecycle |
