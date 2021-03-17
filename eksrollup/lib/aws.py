@@ -251,7 +251,7 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
         lt_name = instance_obj['LaunchTemplate']['LaunchTemplateName']
         lt_version = int(instance_obj['LaunchTemplate']['Version'])
     except KeyError:
-        logger.info("Instance id {} does not match asg launch template of '{}'".format(instance_id, asg_lt_name))
+        logger.info("Instance id {} missing launch template does not match asg launch template of '{}'".format(instance_id, asg_lt_name))
         return True
 
     if lt_name != asg_lt_name:
