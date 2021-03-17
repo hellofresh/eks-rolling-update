@@ -247,8 +247,12 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     describe_launch_templates boto3 method (wrapped in get_launch_template).
     """
     instance_id = instance_obj['InstanceId']
-    lt_name = instance_obj['LaunchTemplate']['LaunchTemplateName']
-    lt_version = int(instance_obj['LaunchTemplate']['Version'])
+    try:
+        lt_name = instance_obj['LaunchTemplate']['LaunchTemplateName']
+        lt_version = int(instance_obj['LaunchTemplate']['Version'])
+    except KeyError:
+        logger.info("Instance id {} does not match asg launch template of '{}'".format(instance_id, asg_lt_name))
+        return True
 
     if lt_name != asg_lt_name:
         logger.info("Instance id {} launch template of '{}' does not match asg launch template of '{}'".format(instance_id, lt_name, asg_lt_name))
