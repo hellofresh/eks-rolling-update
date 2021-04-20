@@ -429,3 +429,17 @@ def count_all_cluster_instances(cluster_name, predictive=False):
             count += len(asg['Instances'])
     logger.info("{} asg instance count in cluster is: {}. K8s node count should match this number".format("*** Predicted" if predictive else "Current", count))
     return count
+
+def registered_elb_list(instance_id):
+    """
+    Returns list of all the ELB registered to ec2 instances in a k8s cluster
+    """
+    registered_elb_list=[]
+    elb = boto3.client('elb')
+    lbs = elb.describe_load_balancers()
+    for i in lbs['LoadBalancerDescriptions']:
+        for  j in i['Instances']:
+            if j['InstanceId'] == instance_id:
+                registered_elb_list.append(i['LoadBalancerName'])
+    logger.info('Instance {} is registered to {}, checking again...'.format(instance_id,registered_elb_list))
+    return registered_elb_list
