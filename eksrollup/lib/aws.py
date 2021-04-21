@@ -7,6 +7,7 @@ from eksrollup.config import app_config
 
 client = boto3.client('autoscaling')
 ec2_client = boto3.client('ec2')
+elb = boto3.client('elb')
 
 
 def get_all_asgs(cluster_tag):
@@ -435,11 +436,10 @@ def registered_elb_list(instance_id):
     Returns list of all the ELB registered to ec2 instances in a k8s cluster
     """
     registered_elb_list=[]
-    elb = boto3.client('elb')
     lbs = elb.describe_load_balancers()
-    for i in lbs['LoadBalancerDescriptions']:
-        for  j in i['Instances']:
-            if j['InstanceId'] == instance_id:
-                registered_elb_list.append(i['LoadBalancerName'])
-    logger.info('Instance {} is registered to {}, checking again...'.format(instance_id,registered_elb_list))
+    for lb in lbs['LoadBalancerDescriptions']:
+        for  instance in lb['Instances']:
+            if instance['InstanceId'] == instance_id:
+                registered_elb_list.append(lb['LoadBalancerName'])
+    logger.info('Instance {} is registered to ELBs : {}, checking again...'.format(instance_id,registered_elb_list))
     return registered_elb_list
