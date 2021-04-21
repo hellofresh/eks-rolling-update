@@ -4,7 +4,7 @@ import time
 import shutil
 from .config import app_config
 from .lib.logger import logger
-from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
+from .lib.aws import is_asg_scaled, is_asg_healthy, registered_elb_list, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node, taint_node
@@ -222,6 +222,9 @@ def update_asgs(asgs, cluster_name):
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 desired_asg_capacity -= 1
                 drain_node(node_name)
+                elb_list=registered_elb_list(instance_id=outdated['InstanceId'])
+                while len(elb_list) !=0:
+                    elb_list=registered_elb_list(instance_id=outdated['InstanceId'])
                 delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
                 # terminate/detach outdated instances only if ASG termination policy is ignored
