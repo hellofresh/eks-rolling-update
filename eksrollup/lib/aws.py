@@ -441,5 +441,18 @@ def registered_elb_list(instance_id):
         for  instance in lb['Instances']:
             if instance['InstanceId'] == instance_id:
                 registered_elb_list.append(lb['LoadBalancerName'])
-    logger.info('Instance {} is registered to ELBs : {}, checking again...'.format(instance_id,registered_elb_list))
+    logger.info('Instance {} is registered to ELBs : {}'.format(instance_id,registered_elb_list))
     return registered_elb_list
+
+def deregister_check(instance_id, registered_elb_list):
+    """
+    Checks if the Instance is OutOfService from the ELB
+    """
+    for lb in registered_elb_list:
+        if elb.describe_instance_health(LoadBalancerName=lb, \
+            Instances=[{'InstanceId': instance_id}])['InstanceStates'][0]['State'] == 'OutOfService':
+            logger.info('Instance {} is {} from ELB {}, checking again...'.format(instance_id,\
+                elb.describe_instance_health(LoadBalancerName=lb, \
+                Instances=[{'InstanceId': instance_id}])['InstanceStates'][0]['State'],lb))
+            registered_elb_list.remove(lb)
+
