@@ -8,8 +8,6 @@ install:
   - pip3 install -r requirements.txt
   - pip3 install -r requirements-tests.txt
 script: make test
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
 before_deploy:
   - make before-dist version=${VERSION}.${TRAVIS_BUILD_NUMBER}
 deploy:
