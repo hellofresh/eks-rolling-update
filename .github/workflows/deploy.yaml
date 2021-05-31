@@ -30,7 +30,7 @@ jobs:
         VERSION: 1.1
       run: |
         make before-dist version=$VERSION.${{ github.run_number }}
-        make dist
+        make dist version=$VERSION.${{ github.run_number }}
 
     - name: Upload to PyPi
       run: |
