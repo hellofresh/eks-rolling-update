@@ -30,8 +30,8 @@ jobs:
         VERSION: 1.1
       run: |
         make before-dist version=$VERSION.${{ github.run_number }}
+        make dist
 
     - name: Upload to PyPi
       run: |
-        python3 -m pip install --user --upgrade twine
         python3 -m twine upload dist/* -u __token__ -p ${{ secrets.PYPI_TOKEN }}
