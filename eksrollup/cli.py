@@ -268,7 +268,7 @@ def main(args=None):
     filtered_asgs = get_asgs(args.cluster_name)
     run_mode = app_config['RUN_MODE']
     # perform a dry run on mode 4 for older nodes
-    if args.plan or app_config['DRY_RUN'] and (run_mode == 4):
+    if (args.plan or app_config['DRY_RUN']) and (run_mode == 4):
         plan_asgs_older_nodes(filtered_asgs)
     # perform a dry run on main mode
     elif args.plan or app_config['DRY_RUN']:
