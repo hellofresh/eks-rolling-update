@@ -191,8 +191,11 @@ def update_asgs(asgs, cluster_name):
             logger.info(
                 f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
+        if (run_mode == 5):
+            logger.info('Scaling up the ASG by one instance (if there are outdated instances to replace).')
+            asg_state_dict[asg_name] = scale_up_asg(cluster_name, asg, 1 if outdated_instance_count > 0 else 0)
 
-        if (run_mode == 1) or (run_mode == 4):
+        if (run_mode == 1) or (run_mode == 4) or (run_mode == 5):
             for outdated in outdated_instances:
                 node_name = ""
                 try:
@@ -220,13 +223,18 @@ def update_asgs(asgs, cluster_name):
             try:
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                desired_asg_capacity -= 1
+                if (run_mode != 5):
+                    desired_asg_capacity -= 1
                 drain_node(node_name)
-                delete_node(node_name)
+                # we need to remove this code as it does provide anything extra vs. just terminating the node
+                # and with it in place, running instances can be left hanging outside the ASG if there's an
+                # error while terminating the instance
+                # logger.info(f'Deleting node {node_name}.')
+                # delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
                 # terminate/detach outdated instances only if ASG termination policy is ignored
                 if not use_asg_termination_policy:
-                    terminate_instance_in_asg(outdated['InstanceId'])
+                    terminate_instance_in_asg(outdated['InstanceId'], False if run_mode == 5 else True)
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
 

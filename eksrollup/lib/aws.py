@@ -48,7 +48,7 @@ def get_launch_template(lt_name):
     return response['LaunchTemplates'][0]
 
 
-def terminate_instance_in_asg(instance_id):
+def terminate_instance_in_asg(instance_id, should_decrement_desired_capacity):
     """
     Terminates EC2 instance given an instance ID
     """
@@ -57,7 +57,7 @@ def terminate_instance_in_asg(instance_id):
         try:
             response = client.terminate_instance_in_auto_scaling_group(
                 InstanceId=instance_id,
-                ShouldDecrementDesiredCapacity=True
+                ShouldDecrementDesiredCapacity=should_decrement_desired_capacity
             )
             if response['ResponseMetadata']['HTTPStatusCode'] == requests.codes.ok:
                 logger.info('Termination signal for instance is successfully sent.')
