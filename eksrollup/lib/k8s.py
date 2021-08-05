@@ -9,13 +9,21 @@ from eksrollup.config import app_config
 
 
 def ensure_config_loaded():
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
+
+    kube_config = os.getenv('KUBECONFIG')
+    if kube_config and os.path.isfile(kube_config):
         try:
             config.load_kube_config(context=app_config['K8S_CONTEXT'])
         except config.ConfigException:
             raise Exception("Could not configure kubernetes python client")
+    else:
+        try:
+            config.load_incluster_config()
+        except config.ConfigException:
+            try:
+                config.load_kube_config(context=app_config['K8S_CONTEXT'])
+            except config.ConfigException:
+                raise Exception("Could not configure kubernetes python client")
 
     proxy_url = os.getenv('HTTPS_PROXY', os.getenv('HTTP_PROXY', None))
     if proxy_url and not app_config['K8S_PROXY_BYPASS']:

@@ -20,6 +20,9 @@ class TestAWS(unittest.TestCase):
             self.aws_response_mock_latest = json.load(file)
         with open(f"{current_dir}/fixtures/get_launch_template.json", "r") as file:
             self.mock_get_launch_template = json.load(file)
+        with open(f"{current_dir}/fixtures/aws_response.json", "r") as file:
+            self.aws_response_mock_no_launch_template = json.load(file)
+
 
     def test_is_instance_outdated(self):
         response = self.aws_response_mock
@@ -77,3 +80,13 @@ class TestAWS(unittest.TestCase):
             with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
                 get_launch_template_mock.return_value = self.mock_get_launch_template
                 self.assertTrue(instance_outdated_launchtemplate(instances[2], 'mock-lt-01', '$Latest'))
+
+    def test_is_instance_outdated_fail_no_launch_template(self):
+        response = self.aws_response_mock_no_launch_template
+        asgs = response['AutoScalingGroups']
+        for asg in asgs:
+            instances = asg['Instances']
+            with patch('eksrollup.lib.aws.get_launch_template') as get_launch_template_mock:
+                get_launch_template_mock.return_value = self.mock_get_launch_template
+                self.assertTrue(instance_outdated_launchtemplate(instances[0], 'mock-lt-01', '$Latest'))
+
