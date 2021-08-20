@@ -242,7 +242,7 @@ def update_asgs(asgs, cluster_name):
                         try:
                             pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
                             while not pods_ready:
-                                logger.info(f'Waiting for {between_nodes_wait} seconds before continuing checking for pods being ready...')
+                                logger.info(f'Waiting for 30 seconds before continuing checking for pods being ready...')
                                 time.sleep(30)
                                 pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
                         except Exception as exception:
@@ -250,7 +250,7 @@ def update_asgs(asgs, cluster_name):
                             logger.error(exception)
                             exit(1)
                     elif between_nodes_wait != 0:
-                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                        logger.info(f'Waiting for {} seconds before continuing...'.format(between_nodes_wait))
                         time.sleep(between_nodes_wait)
             except Exception as drain_exception:
                 logger.info(drain_exception)
