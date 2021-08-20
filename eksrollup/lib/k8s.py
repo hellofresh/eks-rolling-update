@@ -4,7 +4,6 @@ import os
 import subprocess
 import time
 import sys
-import re
 from .logger import logger
 from eksrollup.config import app_config
 
@@ -249,25 +248,32 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     return nodes_online
 
 
+def get_k8s_pods():
+    """
+    Get all pods from all namespaces
+    """
+
+    ensure_config_loaded()
+    k8s_api = client.CoreV1Api()
+    response = k8s_api.list_pod_for_all_namespaces()
+    return response.items
+
+
 def pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
     """
     Checks that all pods matching a regex in a cluster are Ready
     """
 
-    ensure_config_loaded()
-
-    k8s_api = client.CoreV1Api()
-    pods = k8s_api.list_pod_for_all_namespaces()
-    if not pods.items:
-        return True
-    for pod in pods.items:
-        if between_nodes_wait_pod_regex_compiled.search(pod.metadata.name):
-            if pod.status.conditions is None:
-                logger.info('Waiting for pod {} to reach Ready state'.format(pod.metadata.name))
+    pods = get_k8s_pods()
+    for pod in pods:
+        if between_nodes_wait_pod_regex_compiled.search(pod['metadata']['name']):
+            if pod['status']['conditions'] is None:
+                logger.info('Waiting for pod {} to reach Ready state'.format(pod['metadata']['name']))
                 return False
-            for condition in pod.status.conditions:
-                if condition.type != 'Ready' and condition.status != 'True':
-                    logger.info('Waiting for pod {} to reach Ready state'.format(pod.metadata.name))
+            for condition in pod['status']['conditions']:
+                if condition['type'] == 'Ready' and condition['status'] != 'True':
+                    logger.info('Waiting for pod {} to reach Ready state'.format(pod['metadata']['name']))
                     return False
 
+    logger.info('All pods are in Ready state.')
     return True

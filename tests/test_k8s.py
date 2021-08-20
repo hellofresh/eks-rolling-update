@@ -1,7 +1,8 @@
 import os
 import unittest
 import json
-from eksrollup.lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id, ensure_config_loaded
+import re
+from eksrollup.lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_node_by_instance_id, ensure_config_loaded, pods_in_ready_state
 from unittest.mock import patch
 from box import Box
 from kubernetes.client import ApiClient
@@ -17,6 +18,12 @@ class TestK8S(unittest.TestCase):
 
         with open(f"{current_dir}/fixtures/k8s_response_unhealthy.json", "r") as file:
             self.k8s_response_mock_unhealthy = json.load(file)
+
+        with open(f"{current_dir}/fixtures/k8s_response_pods_ready.json", "r") as file:
+            self.k8s_response_mock_pod_ready = json.load(file)
+
+        with open(f"{current_dir}/fixtures/k8s_response_pods_not_ready.json", "r") as file:
+            self.k8s_response_mock_pod_not_ready = json.load(file)
 
         kube_config.KUBE_CONFIG_DEFAULT_LOCATION = f"{current_dir}/fixtures/example-kube-config.yaml"
         print(f"Using test kube config at {kube_config.KUBE_CONFIG_DEFAULT_LOCATION}")
@@ -70,3 +77,14 @@ class TestK8S(unittest.TestCase):
             get_k8s_nodes_mock.return_value = box['items']
             self.assertFalse(k8s_nodes_ready(2, 1), False)
 
+    def test_k8s_pods_ready(self):
+        with patch('eksrollup.lib.k8s.get_k8s_pods') as get_k8s_pods_mock:
+            get_k8s_pods_mock.return_value = self.k8s_response_mock_pod_ready['items']
+            regex = re.compile(r"^test_")
+            self.assertTrue(pods_in_ready_state(regex), True)
+
+    def test_k8s_pods_ready_fail(self):
+        with patch('eksrollup.lib.k8s.get_k8s_pods') as get_k8s_pods_mock:
+            get_k8s_pods_mock.return_value = self.k8s_response_mock_pod_not_ready['items']
+            regex = re.compile(r"^test_")
+            self.assertFalse(pods_in_ready_state(regex), False)
