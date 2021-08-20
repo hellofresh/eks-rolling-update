@@ -7,7 +7,7 @@ from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
-    drain_node, delete_node, cordon_node, taint_node
+    drain_node, delete_node, cordon_node, taint_node, pods_in_ready_state
 from .lib.exceptions import RollingUpdateException
 
 
@@ -231,7 +231,19 @@ def update_asgs(asgs, cluster_name):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
 
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
-                    if between_nodes_wait != 0:
+                    between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
+                    if between_nodes_wait != 0 and between_nodes_wait_pod_regex:
+                        try:
+                            pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex)
+                            while not pods_ready:
+                                logger.info(f'Waiting for {between_nodes_wait} seconds before continuing checking for pods being ready...')
+                                time.sleep(between_nodes_wait)
+                                pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex)
+                        except Exception as exception:
+                            logger.error(f"Encountered an error while waiting for pods to be in Ready state.")
+                            logger.error(exception)
+                            exit(1)
+                    elif between_nodes_wait != 0:
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
             except Exception as drain_exception:
