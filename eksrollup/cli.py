@@ -233,7 +233,11 @@ def update_asgs(asgs, cluster_name):
 
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
+
+                    # dynamic wait based on pod Ready status
                     if between_nodes_wait_pod_regex:
+
+                        # compile regex
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf"{between_nodes_wait_pod_regex}")
                         except re.error:
@@ -246,6 +250,8 @@ def update_asgs(asgs, cluster_name):
                             logger.info(f'Waiting for 30 seconds before continuing checking for pods being ready...')
                             time.sleep(30)
                             pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
+
+                    # static wait in seconds
                     elif between_nodes_wait != 0:
                         logger.info(f'Waiting for {} seconds before continuing...'.format(between_nodes_wait))
                         time.sleep(between_nodes_wait)
