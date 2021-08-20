@@ -240,7 +240,7 @@ def update_asgs(asgs, cluster_name):
                                 time.sleep(between_nodes_wait)
                                 pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex)
                         except Exception as exception:
-                            logger.error(f"Encountered an error while waiting for pods to be in Ready state.")
+                            logger.error("Encountered an error while waiting for pods to be in Ready state.")
                             logger.error(exception)
                             exit(1)
                     elif between_nodes_wait != 0:
