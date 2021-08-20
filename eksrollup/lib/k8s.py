@@ -261,13 +261,13 @@ def pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
     if not pods.items:
         return True
     for pod in pods.items:
-        if between_nodes_wait_pod_regex_compiled.search(pod.name):
+        if between_nodes_wait_pod_regex_compiled.search(pod.metadata.name):
             if pod.status.conditions is None:
-                logger.info('Waiting for pod {} to reach Ready state'.format(pod.name))
+                logger.info('Waiting for pod {} to reach Ready state'.format(pod.metadata.name))
                 return False
             for condition in pod.status.conditions:
                 if condition.type != 'Ready' and condition.status != 'True':
-                    logger.info('Waiting for pod {} to reach Ready state'.format(pod.name))
+                    logger.info('Waiting for pod {} to reach Ready state'.format(pod.metadata.name))
                     return False
 
     return True
