@@ -25,7 +25,7 @@ app_config = {
     'GLOBAL_MAX_RETRY': int(os.getenv('GLOBAL_MAX_RETRY', 12)),
     'GLOBAL_HEALTH_WAIT': int(os.getenv('GLOBAL_HEALTH_WAIT', 20)),
     'BETWEEN_NODES_WAIT': int(os.getenv('BETWEEN_NODES_WAIT', 0)),
-    'BETWEEN_NODES_WAIT_POD_REGEX': int(os.getenv('BETWEEN_NODES_WAIT_POD_REGEX', '')),
+    'BETWEEN_NODES_WAIT_POD_REGEX': os.getenv('BETWEEN_NODES_WAIT_POD_REGEX', ''),
     'RUN_MODE': int(os.getenv('RUN_MODE', 1)),
     'DRY_RUN': str_to_bool(os.getenv('DRY_RUN', False)),
     'EXCLUDE_NODE_LABEL_KEYS': os.getenv('EXCLUDE_NODE_LABEL_KEYS', 'spotinst.io/node-lifecycle').split(),

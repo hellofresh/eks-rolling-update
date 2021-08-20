@@ -241,19 +241,19 @@ def update_asgs(asgs, cluster_name):
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf"{between_nodes_wait_pod_regex}")
                         except re.error:
-                            logger.error("{} is not a valid regex pattern!".format(between_nodes_wait_pod_regex))
+                            logger.error('{between_nodes_wait_pod_regex} is not a valid regex pattern!')
                             exit(1)
 
                         # check for pods need to wait for until Ready state
                         pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
                         while not pods_ready:
-                            logger.info(f'Waiting for 30 seconds before continuing checking for pods being ready...')
+                            logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
                             time.sleep(30)
                             pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
 
                     # static wait in seconds
                     elif between_nodes_wait != 0:
-                        logger.info(f'Waiting for {} seconds before continuing...'.format(between_nodes_wait))
+                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
             except Exception as drain_exception:
                 logger.info(drain_exception)
