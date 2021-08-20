@@ -2,6 +2,7 @@ import sys
 import argparse
 import time
 import shutil
+import re
 from .config import app_config
 from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
@@ -234,11 +235,17 @@ def update_asgs(asgs, cluster_name):
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
                     if between_nodes_wait_pod_regex:
                         try:
-                            pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex)
+                            between_nodes_wait_pod_regex_compiled = re.compile(rf"{between_nodes_wait_pod_regex}")
+                        except re.error:
+                            logger.error("{} is not a valid regex pattern!".format(pod_regex))
+                            logger.error(exception)
+                            exit(1)
+                        try:
+                            pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
                             while not pods_ready:
                                 logger.info(f'Waiting for {between_nodes_wait} seconds before continuing checking for pods being ready...')
                                 time.sleep(30)
-                                pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex)
+                                pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
                         except Exception as exception:
                             logger.error("Encountered an error while waiting for pods to be in Ready state.")
                             logger.error(exception)

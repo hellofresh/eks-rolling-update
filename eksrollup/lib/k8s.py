@@ -249,7 +249,7 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     return nodes_online
 
 
-def pods_in_ready_state(pod_regex):
+def pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
     """
     Checks that all pods matching a regex in a cluster are Ready
     """
@@ -257,24 +257,17 @@ def pods_in_ready_state(pod_regex):
     ensure_config_loaded()
 
     k8s_api = client.CoreV1Api()
-    logger.info("Ensure all pods matching {} are in Ready state...".format(pod_regex))
-    try:
-        pods = k8s_api.list_pod_for_all_namespaces()
-        if not pods.items:
-            return True
-        for pod in pods.items:
-            try:
-                re_match = re.match(rf"{pod_regex}", pod.name, re.IGNORECASE)
-            except re.error:
-                logger.info("{} is not a valid regex pattern!".format(pod_regex))
-            if re_match:
-                if pod.status.conditions is None:
+    pods = k8s_api.list_pod_for_all_namespaces()
+    if not pods.items:
+        return True
+    for pod in pods.items:
+        if between_nodes_wait_pod_regex_compiled.search(pod.name):
+            if pod.status.conditions is None:
+                logger.info('Waiting for pod {} to reach Ready state'.format(pod.name))
+                return False
+            for condition in pod.status.conditions:
+                if condition.type != 'Ready' and condition.status != 'True':
+                    logger.info('Waiting for pod {} to reach Ready state'.format(pod.name))
                     return False
-                for condition in pod.status.conditions:
-                    if condition.type != 'Ready' or condition.status != 'True':
-                        return False
-        logger.info("All pods matching {} are in Ready state.".format(pod_regex))
-    except ApiException as e:
-        logger.info("Exception when calling CoreV1Api->list_pod_for_all_namespaces: {}".format(e))
 
     return True
