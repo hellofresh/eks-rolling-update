@@ -264,7 +264,7 @@ def pods_in_ready_state(pod_regex):
             return True
         for pod in pods.items:
             try:
-                re_match = re.match(pod_regex, pod.name)
+                re_match = re.match(rf"{pod_regex}" , pod.name, re.IGNORECASE)
             except re.error:
                 logger.info("{} is not a valid regex pattern!".format(pod_regex))
             if re_match:
