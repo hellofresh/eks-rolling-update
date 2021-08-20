@@ -261,7 +261,7 @@ def get_k8s_pods():
 
 def pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
     """
-    Checks that all pods matching a regex in a cluster are Ready
+    Checks that all pods matching a regex in a cluster are in Ready state
     """
 
     pods = get_k8s_pods()
