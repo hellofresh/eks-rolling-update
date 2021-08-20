@@ -275,6 +275,6 @@ def pods_in_ready_state(pod_regex):
                         return False
         logger.info("All pods matching {} are in Ready state.".format(pod_regex))
     except ApiException as e:
-        logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
+        logger.info("Exception when calling CoreV1Api->list_pod_for_all_namespaces: {}".format(e))
 
     return True
