@@ -267,11 +267,11 @@ def pods_in_ready_state(regex_compiled):
     for pod in get_k8s_pods():
         if regex_compiled.search(pod['metadata']['name']):
             if pod['status']['conditions'] is None:
-                logger.info('Waiting for pod {} to reach Ready state.'.format(pod['metadata']['name']))
+                logger.info(f'pod {pod['metadata']['name']} is not in Ready state.')
                 return False
             for condition in pod['status']['conditions']:
                 if condition['type'] == 'Ready' and condition['status'] != 'True':
-                    logger.info('Waiting for pod {} to reach Ready state.'.format(pod['metadata']['name']))
+                    logger.info(f'pod {pod['metadata']['name']} is not in Ready state.')
                     return False
 
     logger.info('All pods are in Ready state.')
