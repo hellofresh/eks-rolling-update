@@ -264,8 +264,7 @@ def pods_in_ready_state(regex_compiled):
     Checks that all pods matching a regex in a cluster are in Ready state
     """
 
-    pods = get_k8s_pods()
-    for pod in pods:
+    for pod in get_k8s_pods():
         if regex_compiled.search(pod['metadata']['name']):
             if pod['status']['conditions'] is None:
                 logger.info('Waiting for pod {} to reach Ready state.'.format(pod['metadata']['name']))
