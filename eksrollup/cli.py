@@ -245,11 +245,9 @@ def update_asgs(asgs, cluster_name):
                             exit(1)
 
                         # check for pods need to wait for until Ready state
-                        pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
-                        while not pods_ready:
+                        while not pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
                             logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
                             time.sleep(30)
-                            pods_ready = pods_in_ready_state(between_nodes_wait_pod_regex_compiled)
 
                     # static wait in seconds
                     elif between_nodes_wait != 0:
