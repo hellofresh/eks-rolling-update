@@ -230,26 +230,17 @@ def update_asgs(asgs, cluster_name):
                     terminate_instance_in_asg(outdated['InstanceId'])
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
-
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
-
-                    # dynamic wait based on pod Ready status
                     if between_nodes_wait_pod_regex:
-
-                        # compile regex
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf"{between_nodes_wait_pod_regex}")
                         except re.error:
                             logger.error('{between_nodes_wait_pod_regex} is not a valid regex pattern!')
                             exit(1)
-
-                        # check for pods need to wait for until Ready state
                         while not pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
                             logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
                             time.sleep(30)
-
-                    # static wait in seconds
                     elif between_nodes_wait != 0:
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
