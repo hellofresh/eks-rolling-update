@@ -234,7 +234,7 @@ def update_asgs(asgs, cluster_name):
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
                     if between_nodes_wait_pod_regex:
                         try:
-                            between_nodes_wait_pod_regex_compiled = re.compile(rf"{between_nodes_wait_pod_regex}")
+                            between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
                         except re.error:
                             logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
                             exit(1)
