@@ -248,14 +248,14 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     return nodes_online
 
 
-def get_k8s_pods():
+def get_k8s_pods(node_name):
     """
-    Get all pods from all namespaces
+    Get all pods from all namespaces for specific node
     """
 
     ensure_config_loaded()
     k8s_api = client.CoreV1Api()
-    response = k8s_api.list_pod_for_all_namespaces()
+    response = k8s_api.list_pod_for_all_namespaces(field_selector=f"spec.nodeName={node_name}")
     return response.items
 
 

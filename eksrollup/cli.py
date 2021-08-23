@@ -232,7 +232,7 @@ def update_asgs(asgs, cluster_name):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
-                    k8s_pods = get_k8s_pods()
+                    k8s_pods = get_k8s_pods(node_name)
                     if between_nodes_wait_pod_regex:
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
