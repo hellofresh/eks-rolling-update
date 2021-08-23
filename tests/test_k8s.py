@@ -78,13 +78,9 @@ class TestK8S(unittest.TestCase):
             self.assertFalse(k8s_nodes_ready(2, 1), False)
 
     def test_k8s_pods_ready(self):
-        with patch('eksrollup.lib.k8s.get_k8s_pods') as get_k8s_pods_mock:
-            get_k8s_pods_mock.return_value = self.k8s_response_mock_pod_ready['items']
-            regex = re.compile(r"^test_")
-            self.assertTrue(pods_in_ready_state(regex), True)
+        regex = re.compile(r"^test_")
+        self.assertTrue(pods_in_ready_state(self.k8s_response_mock_pod_ready['items'], regex), True)
 
     def test_k8s_pods_ready_fail(self):
-        with patch('eksrollup.lib.k8s.get_k8s_pods') as get_k8s_pods_mock:
-            get_k8s_pods_mock.return_value = self.k8s_response_mock_pod_not_ready['items']
-            regex = re.compile(r"^test_")
-            self.assertFalse(pods_in_ready_state(regex), False)
+        regex = re.compile(r"^test_")
+        self.assertFalse(pods_in_ready_state(self.k8s_response_mock_pod_not_ready['items'], regex), False)

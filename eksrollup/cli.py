@@ -8,7 +8,7 @@ from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
-    drain_node, delete_node, cordon_node, taint_node, pods_in_ready_state
+    drain_node, delete_node, cordon_node, taint_node, pods_in_ready_state, get_k8s_pods, match_k8s_pods
 from .lib.exceptions import RollingUpdateException
 
 
@@ -232,15 +232,20 @@ def update_asgs(asgs, cluster_name):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
+                    k8s_pods = get_k8s_pods()
                     if between_nodes_wait_pod_regex:
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
                         except re.error:
                             logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
                             exit(1)
-                        while not pods_in_ready_state(between_nodes_wait_pod_regex_compiled):
-                            logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
-                            time.sleep(30)
+                        if match_k8s_pods(k8s_pods, between_nodes_wait_pod_regex_compiled):
+                            while not pods_in_ready_state(k8s_pods, between_nodes_wait_pod_regex_compiled):
+                                logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
+                                time.sleep(30)
+                        else:
+                            logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                            time.sleep(between_nodes_wait)
                     elif between_nodes_wait != 0:
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)

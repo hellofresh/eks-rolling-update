@@ -259,12 +259,25 @@ def get_k8s_pods():
     return response.items
 
 
-def pods_in_ready_state(regex_compiled):
+def match_k8s_pods(pods, regex_compiled):
+    """
+    Check for mathing pods
+    """
+
+    for pod in pods:
+        name = pod['metadata']['name']
+        if regex_compiled.search(name):
+            return True
+
+    return False
+
+
+def pods_in_ready_state(pods, regex_compiled):
     """
     Checks that all pods matching a regex in a cluster are in Ready state
     """
 
-    for pod in get_k8s_pods():
+    for pod in pods:
         name = pod['metadata']['name']
         conditions = pod['status']['conditions']
         if regex_compiled.search(name):
