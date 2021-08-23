@@ -268,7 +268,6 @@ def match_k8s_pods(pods, regex_compiled):
         name = pod['metadata']['name']
         if regex_compiled.search(name):
             return True
-
     return False
 
 
@@ -288,6 +287,5 @@ def pods_in_ready_state(pods, regex_compiled):
                 if condition['type'] == 'Ready' and condition['status'] != 'True':
                     logger.info('pod {} is not in Ready state.'.format(name))
                     return False
-
     logger.info('All pods are in Ready state.')
     return True
