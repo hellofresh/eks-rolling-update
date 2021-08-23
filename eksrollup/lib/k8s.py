@@ -255,7 +255,7 @@ def get_k8s_pods(node_name):
 
     ensure_config_loaded()
     k8s_api = client.CoreV1Api()
-    response = k8s_api.list_pod_for_all_namespaces(field_selector=f"spec.nodeName={node_name}")
+    response = k8s_api.list_pod_for_all_namespaces(field_selector=f'spec.nodeName={node_name}')
     return response.items
 
 
