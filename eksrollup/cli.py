@@ -226,8 +226,8 @@ def update_asgs(asgs, cluster_name):
             try:
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                desired_asg_capacity -= 1
                 k8s_pods = get_k8s_pods(node_name)
+                desired_asg_capacity -= 1
                 drain_node(node_name)
                 delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
