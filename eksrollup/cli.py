@@ -227,6 +227,7 @@ def update_asgs(asgs, cluster_name):
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 desired_asg_capacity -= 1
+                k8s_pods = get_k8s_pods(node_name)
                 drain_node(node_name)
                 delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
@@ -237,7 +238,6 @@ def update_asgs(asgs, cluster_name):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
-                    k8s_pods = get_k8s_pods(node_name)
                     k8s_pods_match_regex = False
                     if between_nodes_wait_pod_regex:
                         try:
