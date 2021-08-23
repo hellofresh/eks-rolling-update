@@ -144,6 +144,11 @@ def scale_up_asg(cluster_name, asg, count):
     return desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
 
+def wait_for_node(seconds):
+    logger.info(f'Waiting for {seconds} seconds before continuing...')
+    time.sleep(seconds)
+
+
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
@@ -233,22 +238,19 @@ def update_asgs(asgs, cluster_name):
                     between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
                     k8s_pods = get_k8s_pods(node_name)
+                    k8s_pods_match_regex = False
                     if between_nodes_wait_pod_regex:
                         try:
                             between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
                         except re.error:
                             logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
                             exit(1)
-                        if match_k8s_pods(k8s_pods, between_nodes_wait_pod_regex_compiled):
+                        k8s_pods_match_regex = match_k8s_pods(k8s_pods, between_nodes_wait_pod_regex_compiled)
+                        if k8s_pods_match_regex:
                             while not pods_in_ready_state(k8s_pods, between_nodes_wait_pod_regex_compiled):
-                                logger.info('Waiting for 30 seconds before continuing checking for pods being ready...')
-                                time.sleep(30)
-                        else:
-                            logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
-                            time.sleep(between_nodes_wait)
-                    elif between_nodes_wait != 0:
-                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
-                        time.sleep(between_nodes_wait)
+                                wait_for_node(30)
+                    if not k8s_pods_match_regex and between_nodes_wait != 0:
+                        wait_for_node(between_nodes_wait)
             except Exception as drain_exception:
                 logger.info(drain_exception)
                 raise RollingUpdateException("Rolling update on ASG failed", asg_name)
