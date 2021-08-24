@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 import sys
+import re
 from .logger import logger
 from eksrollup.config import app_config
 
@@ -248,14 +249,17 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     return nodes_online
 
 
-def get_k8s_pods(node_name):
+def get_k8s_pods(node_name=''):
     """
     Get all pods from all namespaces for specific node
     """
 
     ensure_config_loaded()
     k8s_api = client.CoreV1Api()
-    response = k8s_api.list_pod_for_all_namespaces(field_selector=f'spec.nodeName={node_name}')
+    if node_name:
+        response = k8s_api.list_pod_for_all_namespaces(field_selector=f'spec.nodeName={node_name}')
+    else:
+        response = k8s_api.list_pod_for_all_namespaces()
     return response.items
 
 
@@ -264,28 +268,39 @@ def match_k8s_pods(pods, regex_compiled):
     Check for mathing pods
     """
 
+    matched_pods = []
+    logger.info(f'Applying regex "{regex_compiled.pattern}" on')
     for pod in pods:
-        name = pod['metadata']['name']
-        if regex_compiled.search(name):
-            return True
-    return False
+        pod = dict(pod)
+        name = pod["metadata"]["name"]
+        result = regex_compiled.search(name)
+        if result:
+            matched_pods.append(result.group(0))
+
+    logger.info(f'Matches: {matched_pods}')
+    return matched_pods
 
 
-def pods_in_ready_state(pods, regex_compiled):
+def pods_in_ready_state(matched_pods):
     """
     Checks that all pods matching a regex in a cluster are in Ready state
     """
 
-    for pod in pods:
-        name = pod['metadata']['name']
-        conditions = pod['status']['conditions']
-        if regex_compiled.search(name):
+    matched_pods_regex = '^(' + '|'.join(matched_pods) + ')'
+    compiled = re.compile(rf'{matched_pods_regex}')
+    logger.info(f'Applying matched pod regex: "{matched_pods_regex}"')
+    for pod in get_k8s_pods():
+        pod = dict(pod)
+        name = pod["metadata"]["name"]
+        conditions = pod["status"]["conditions"]
+        if compiled.search(name):
             if conditions is None:
-                logger.info('pod {} is not in Ready state.'.format(name))
+                logger.info(f'{name} is not in Ready state.')
                 return False
             for condition in conditions:
-                if condition['type'] == 'Ready' and condition['status'] != 'True':
-                    logger.info('pod {} is not in Ready state.'.format(name))
+                if condition["type"] == 'Ready' and condition["status"] != 'True':
+                    logger.info(f'{name} is not in Ready state.')
                     return False
+
     logger.info('All pods are in Ready state.')
     return True
