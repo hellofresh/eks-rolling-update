@@ -152,6 +152,8 @@ def wait_for_node(seconds):
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
+    between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
+    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
 
     if run_mode == 4:
         asg_outdated_instance_dict = plan_asgs_older_nodes(asgs)
@@ -227,33 +229,38 @@ def update_asgs(asgs, cluster_name):
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 k8s_node_pods = get_k8s_pods(node_name)
-                k8s_node_pods_list = match_k8s_pods(k8s_node_pods, re.compile(rf'.*'))
-                logger.info(f'Pods on current node: {k8s_node_pods_list}')
                 desired_asg_capacity -= 1
                 drain_node(node_name)
                 delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
+
+                k8s_matched_pods = []
+
+                if between_nodes_wait_pod_regex:
+                    logger.info(f'Wait for "Ready" state regex: {between_nodes_wait_pod_regex}')
+                    try:
+                        between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
+                        logger.info(f'Regex sucessfully compiled: {between_nodes_wait_pod_regex}')
+                    except re.error:
+                        logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
+                        exit(1)
+                    k8s_matched_pods = match_k8s_pods(k8s_node_pods, between_nodes_wait_pod_regex_compiled)
+                    if len(k8s_matched_pods) > 0:
+                        logger.info(f'Waiting for k8s pods with prefix: {k8s_matched_pods}')
+                        while not pods_in_ready_state(k8s_matched_pods):
+                            wait_for_node(30)
+                if len(k8s_matched_pods) == 0 and between_nodes_wait != 0:
+                    wait_for_node(between_nodes_wait)
+
                 # terminate/detach outdated instances only if ASG termination policy is ignored
                 if not use_asg_termination_policy:
                     terminate_instance_in_asg(outdated['InstanceId'])
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
-                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
-                    between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
-                    if between_nodes_wait_pod_regex:
-                        try:
-                            between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
-                            logger.info(f'Regex sucessfully compiled: {between_nodes_wait_pod_regex}')
-                        except re.error:
-                            logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
-                            exit(1)
-                        k8s_matched_pods = match_k8s_pods(k8s_node_pods, k8s_node_pods_list, between_nodes_wait_pod_regex_compiled)
-                        if len(k8s_matched_pods) > 0:
-                            logger.info(f'Waiting for k8s pods: {k8s_matched_pods}')
-                            while not pods_in_ready_state(k8s_matched_pods):
-                                wait_for_node(30)
-                    if len(k8s_matched_pods) == 0 and between_nodes_wait != 0:
-                        wait_for_node(between_nodes_wait)
+
+                    if between_nodes_wait != 0:
+                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                        time.sleep(between_nodes_wait)
             except Exception as drain_exception:
                 logger.info(drain_exception)
                 raise RollingUpdateException("Rolling update on ASG failed", asg_name)

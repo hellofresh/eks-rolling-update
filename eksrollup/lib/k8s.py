@@ -271,8 +271,8 @@ def match_k8s_pods(pods, regex_compiled):
     matched_pods = []
     logger.info(f'Applying regex "{regex_compiled.pattern}" on')
     for pod in pods:
-        pod = dict(pod)
-        name = pod["metadata"]["name"]
+        p = pod.to_dict()
+        name = p["metadata"]["name"]
         result = regex_compiled.search(name)
         if result:
             matched_pods.append(result.group(0))
@@ -290,9 +290,9 @@ def pods_in_ready_state(matched_pods):
     compiled = re.compile(rf'{matched_pods_regex}')
     logger.info(f'Applying matched pod regex: "{matched_pods_regex}"')
     for pod in get_k8s_pods():
-        pod = dict(pod)
-        name = pod["metadata"]["name"]
-        conditions = pod["status"]["conditions"]
+        p = pod.to_dict()
+        name = p["metadata"]["name"]
+        conditions = p["status"]["conditions"]
         if compiled.search(name):
             if conditions is None:
                 logger.info(f'{name} is not in Ready state.')
