@@ -143,6 +143,17 @@ def scale_up_asg(cluster_name, asg, count):
     return desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
 
+def verify_mdm_clusters(cluster_name):
+    if cluster_name.startswith("mdmcloud"):
+        logger.info("Cluster {} is an mdm cluster so performing user consent confirmation...".format(cluster_name))
+        user_input = None
+        while user_input==None or user_input!="yes":
+            logger.info("[{}] : Press 'yes' to proceed :".format(cluster_name))
+        logger.info("User confirmed with input as 'yes' so proceeding with furter operations...")
+    else:
+        logger.info("Cluster {} is non-mdm cluster so skipping user consent confirmation...".format(cluster_name))
+
+
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
@@ -181,6 +192,9 @@ def update_asgs(asgs, cluster_name):
                     logger.error(f"Encountered an error when adding taint/cordoning node {node_name}")
                     logger.error(exception)
                     exit(1)
+
+    #Ask for user confirmation as "yes" for mdm-cluster:
+    verify_mdm_clusters(cluster_name=cluster_name)
 
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
