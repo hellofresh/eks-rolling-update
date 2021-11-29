@@ -148,7 +148,11 @@ def verify_mdm_clusters(cluster_name):
         logger.info("Cluster {} is an mdm cluster so performing user consent confirmation...".format(cluster_name))
         user_input = None
         while user_input==None or user_input!="yes":
-            logger.info("[{}] : Press 'yes' to proceed :".format(cluster_name))
+            if user_input=="no":
+                logger.info("User confirmed with input as 'no' so quiting the script execution...")
+                sys.exit(-1)
+            logger.info("[{}] : Press 'yes' to proceed and 'no' to quit.".format(cluster_name))
+            user_input=input()
         logger.info("User confirmed with input as 'yes' so proceeding with furter operations...")
     else:
         logger.info("Cluster {} is non-mdm cluster so skipping user consent confirmation...".format(cluster_name))
@@ -194,8 +198,11 @@ def update_asgs(asgs, cluster_name):
                     exit(1)
 
     #Ask for user confirmation as "yes" for mdm-cluster:
-    verify_mdm_clusters(cluster_name=cluster_name)
-
+    if not app_config['SKIP_MDM_CHECK']:
+        verify_mdm_clusters(cluster_name=cluster_name)
+    else:
+        logger.info("Disabling mdm cluster check as SKIP_MDM_CHECK env is set to True.")
+        
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
         outdated_instances, asg = asg_tuple
