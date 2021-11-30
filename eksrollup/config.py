@@ -33,5 +33,6 @@ app_config = {
     'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False)),
     'BATCH_SIZE': int(os.getenv('BATCH_SIZE', 0)),
     'ENFORCED_DRAINING': str_to_bool(os.getenv('ENFORCED_DRAINING', False)),
-    'ASG_NAMES': os.getenv('ASG_NAMES', '').split()
+    'ASG_NAMES': os.getenv('ASG_NAMES', '').split(),
+    'SKIP_MDM_CHECK': str_to_bool(os.getenv('SKIP_MDM_CHECK', False))
 }
