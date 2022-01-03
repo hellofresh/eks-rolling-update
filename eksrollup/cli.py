@@ -7,7 +7,7 @@ from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, registered_elb_list, deregister_check, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
-    drain_node, delete_node, cordon_node, taint_node
+    drain_node, delete_node, cordon_node, taint_node, add_node_labels
 from .lib.exceptions import RollingUpdateException
 
 
@@ -202,7 +202,7 @@ def update_asgs(asgs, cluster_name):
         verify_mdm_clusters(cluster_name=cluster_name)
     else:
         logger.info("Disabling mdm cluster check as SKIP_MDM_CHECK env is set to True.")
-        
+
     # Drain, Delete and Terminate the outdated nodes and return the ASGs back to their original state
     for asg_name, asg_tuple in asg_outdated_instance_dict.items():
         outdated_instances, asg = asg_tuple
@@ -243,6 +243,8 @@ def update_asgs(asgs, cluster_name):
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
                 desired_asg_capacity -= 1
                 elb_list=registered_elb_list(instance_id=outdated['InstanceId'])
+                # Add labels to the nodes
+                add_node_labels(node_name)
                 drain_node(node_name)
                 while len(elb_list) !=0:
                     deregister_check(instance_id=outdated['InstanceId'], registered_elb_list=elb_list)
