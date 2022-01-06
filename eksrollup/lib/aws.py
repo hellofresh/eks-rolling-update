@@ -426,7 +426,7 @@ def count_all_cluster_instances(cluster_name, predictive=False, exclude_node_lab
     Returns the total number of ec2 instances in a k8s cluster
     """
 
-    # Get the K8s nodes on the cluster, while excluding the relevant
+    # Get the K8s nodes on the cluster, while excluding nodes with certain label keys
     k8s_nodes = get_k8s_nodes(exclude_node_label_keys)
 
     count = 0
