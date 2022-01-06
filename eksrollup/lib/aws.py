@@ -4,6 +4,7 @@ import datetime
 import requests
 from .logger import logger
 from eksrollup.config import app_config
+from .k8s import get_k8s_nodes, get_node_by_instance_id
 
 client = boto3.client('autoscaling')
 ec2_client = boto3.client('ec2')
@@ -420,16 +421,28 @@ def get_asg_tag(tags, tag_name):
     return result
 
 
-def count_all_cluster_instances(cluster_name, predictive=False):
+def count_all_cluster_instances(cluster_name, predictive=False, exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
     """
     Returns the total number of ec2 instances in a k8s cluster
     """
+
+    # Get the K8s nodes on the cluster, while excluding the relevant
+    k8s_nodes = get_k8s_nodes(exclude_node_label_keys)
+
     count = 0
     asgs = get_all_asgs(cluster_name)
     for asg in asgs:
+        instances = asg['Instances']
         if predictive:
             count += asg['DesiredCapacity']
         else:
-            count += len(asg['Instances'])
+            # Use the get_node_by_instance_id() function as it only returns the node if it is not excluded by K8s labels
+            for instance in instances:
+                instance_id = instance['InstanceId']
+                try:
+                    get_node_by_instance_id(k8s_nodes, instance_id)
+                    count += 1
+                except:
+                    logger.info("Skipping instance {}".format(instance_id))
     logger.info("{} asg instance count in cluster is: {}. K8s node count should match this number".format("*** Predicted" if predictive else "Current", count))
     return count
