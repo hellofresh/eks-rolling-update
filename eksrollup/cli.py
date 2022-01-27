@@ -2,12 +2,13 @@ import sys
 import argparse
 import time
 import shutil
+import re
 from .config import app_config
 from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
 from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
-    drain_node, delete_node, cordon_node, taint_node
+    drain_node, delete_node, cordon_node, taint_node, pods_in_ready_state, get_k8s_pods, match_k8s_pods
 from .lib.exceptions import RollingUpdateException
 
 
@@ -143,9 +144,16 @@ def scale_up_asg(cluster_name, asg, count):
     return desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
 
+def wait_for_node(seconds):
+    logger.info(f'Waiting for {seconds} seconds before continuing...')
+    time.sleep(seconds)
+
+
 def update_asgs(asgs, cluster_name):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
+    between_nodes_wait_pod_regex = app_config['BETWEEN_NODES_WAIT_POD_REGEX']
+    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
 
     if run_mode == 4:
         asg_outdated_instance_dict = plan_asgs_older_nodes(asgs)
@@ -220,17 +228,36 @@ def update_asgs(asgs, cluster_name):
             try:
                 # get the k8s node name instead of instance id
                 node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                k8s_node_pods = get_k8s_pods(node_name)
                 desired_asg_capacity -= 1
                 drain_node(node_name)
                 delete_node(node_name)
                 save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
+
+                k8s_matched_pods = []
+
+                if between_nodes_wait_pod_regex:
+                    logger.info(f'Wait for "Ready" state regex: {between_nodes_wait_pod_regex}')
+                    try:
+                        between_nodes_wait_pod_regex_compiled = re.compile(rf'{between_nodes_wait_pod_regex}')
+                        logger.info(f'Regex sucessfully compiled: {between_nodes_wait_pod_regex}')
+                    except re.error:
+                        logger.error(f'{between_nodes_wait_pod_regex} is not a valid regex pattern!')
+                        exit(1)
+                    k8s_matched_pods = match_k8s_pods(k8s_node_pods, between_nodes_wait_pod_regex_compiled)
+                    if len(k8s_matched_pods) > 0:
+                        logger.info(f'Waiting for k8s pods with prefix: {k8s_matched_pods}')
+                        while not pods_in_ready_state(k8s_matched_pods):
+                            wait_for_node(30)
+                if len(k8s_matched_pods) == 0 and between_nodes_wait != 0:
+                    wait_for_node(between_nodes_wait)
+
                 # terminate/detach outdated instances only if ASG termination policy is ignored
                 if not use_asg_termination_policy:
                     terminate_instance_in_asg(outdated['InstanceId'])
                     if not instance_terminated(outdated['InstanceId']):
                         raise Exception('Instance is failing to terminate. Cancelling out.')
 
-                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
                     if between_nodes_wait != 0:
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
