@@ -161,6 +161,9 @@ def taint_node(node_name):
 
 
 def drain(node_name):
+    """
+    Drain pods from the given node
+    """
     config.load_kube_config()
     v1 = client.CoreV1Api()
     if app_config['DRY_RUN'] is True:
