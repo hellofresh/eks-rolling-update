@@ -161,53 +161,53 @@ def taint_node(node_name):
 
 
 def drain(node_name):
-	config.load_kube_config()
-	v1 = client.CoreV1Api()
-	if app_config['DRY_RUN'] is True:
-		logger.info("node/{} drained (dry run)".format(node_name))
-		return
-	field_selector = 'spec.nodeName='+node_name
-	ret = v1.list_pod_for_all_namespaces(watch=False,\
-		  field_selector=field_selector) 
-	pods_to_evict=[]
-	for pod in ret.items:
-		if not pod.metadata.owner_references:
-			logger.info("cannot delete Pods {} which is not managed byReplicationController, ReplicaSet, Job, DaemonSet orStatefulSet".format(pod.metadata.name))
-			sys.exit(1)
-		for owner_reference in pod.metadata.owner_references:
-			if (owner_reference.controller and\
-				owner_reference.kind != "DaemonSet"):
-				logger.info("evicting pod {}/{}".format(pod.metadata.namespace, pod.metadata.name))
-				pods_to_evict.append(pod)
-			elif owner_reference.kind == "DaemonSet":
-				logger.info("ignoring DaemonSet-managed Pods: {}/{}".format(pod.metadata.namespace, pod.metadata.name))
-	while True:
-		for pod in pods_to_evict:
-			time.sleep(2)
-			try:
-				body = client.V1beta1Eviction(metadata=client.V1ObjectMeta(\
-					name=pod.metadata.name, namespace=pod.metadata.namespace))
-				v1.create_namespaced_pod_eviction(name=pod.metadata.name,\
-					namespace=pod.metadata.namespace, body=body)
-				logger.info("pod/{} evicted".format(pod.metadata.name))
-			except ApiException as x:
-				if x.status == 429:
-					logger.info("Failed to evict pod {}:{}".format(pod.metadata.name, loads(x.body)['details']))
-					continue
-			try:
-				p = v1.read_namespaced_pod(pod.metadata.name,\
-				pod.metadata.namespace)
-				#statefulset fall in this category
-				if p.metadata.uid != pod.metadata.uid:
-					pods_to_evict.remove(pod)
-					continue
-			except ApiException as x:
-				#pod is gone, not found
-				if x.status == 404:
-					pods_to_evict.remove(pod)
-		if not pods_to_evict:
-			logger.info("node/{} drained".format(node_name))
-			break
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    if app_config['DRY_RUN'] is True:
+        logger.info("node/{} drained (dry run)".format(node_name))
+        return
+    field_selector = 'spec.nodeName='+node_name
+    ret = v1.list_pod_for_all_namespaces(watch=False,\
+            field_selector=field_selector) 
+    pods_to_evict=[]
+    for pod in ret.items:
+        if not pod.metadata.owner_references:
+            logger.info("cannot delete Pods {} which is not managed byReplicationController, ReplicaSet, Job, DaemonSet orStatefulSet".format(pod.metadata.name))
+            sys.exit(1)
+        for owner_reference in pod.metadata.owner_references:
+            if (owner_reference.controller and\
+                owner_reference.kind != "DaemonSet"):
+                logger.info("evicting pod {}/{}".format(pod.metadata.namespace, pod.metadata.name))
+                pods_to_evict.append(pod)
+            elif owner_reference.kind == "DaemonSet":
+                logger.info("ignoring DaemonSet-managed Pods: {}/{}".format(pod.metadata.namespace, pod.metadata.name))
+    while True:
+        for pod in pods_to_evict:
+            time.sleep(2)
+            try:
+                body = client.V1beta1Eviction(metadata=client.V1ObjectMeta(\
+                    name=pod.metadata.name, namespace=pod.metadata.namespace))
+                v1.create_namespaced_pod_eviction(name=pod.metadata.name,\
+                    namespace=pod.metadata.namespace, body=body)
+                logger.info("pod/{} evicted".format(pod.metadata.name))
+            except ApiException as x:
+                if x.status == 429:
+                    logger.info("Failed to evict pod {}:{}".format(pod.metadata.name, loads(x.body)['details']))
+                    continue
+            try:
+                p = v1.read_namespaced_pod(pod.metadata.name,\
+                pod.metadata.namespace)
+                #statefulset fall in this category
+                if p.metadata.uid != pod.metadata.uid:
+                    pods_to_evict.remove(pod)
+                    continue
+            except ApiException as x:
+                #pod is gone, not found
+                if x.status == 404:
+                    pods_to_evict.remove(pod)
+        if not pods_to_evict:
+            logger.info("node/{} drained".format(node_name))
+            break
 
 
 def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
