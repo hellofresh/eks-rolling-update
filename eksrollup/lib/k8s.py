@@ -160,38 +160,57 @@ def taint_node(node_name):
         logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
 
 
-def drain_node(node_name):
+def drain(node_name):
     """
-    Executes kubectl commands to drain the node. We are not using the api
-    because the draining functionality is done client side and to
-    replicate the same functionality here would be too time consuming
+    Drain pods from the given node
     """
-    kubectl_args = [
-        'kubectl', 'drain', node_name,
-        '--ignore-daemonsets',
-        '--delete-local-data'
-    ]
-    kubectl_args += app_config['EXTRA_DRAIN_ARGS']
-
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
     if app_config['DRY_RUN'] is True:
-        kubectl_args += ['--dry-run']
-
-    logger.info('Draining worker node with {}...'.format(' '.join(kubectl_args)))
-    result = subprocess.run(kubectl_args)
-
-    # If returncode is non-zero run enforced draining of the node or raise a CalledProcessError.
-    if result.returncode != 0:
-        if app_config['ENFORCED_DRAINING'] is True:
-            kubectl_args += [
-                '--disable-eviction=true',
-                '--force=true'
-            ]
-            logger.info('There was an error draining the worker node, proceed with enforced draining ({})...'.format(' '.join(kubectl_args)))
-            enforced_result = subprocess.run(kubectl_args)
-            if enforced_result.returncode != 0:
-                raise Exception("Node not drained properly with enforced draining enabled. Exiting")
-        else:
-            raise Exception("Node not drained properly. Exiting")
+        logger.info("node/{} drained (dry run)".format(node_name))
+        return
+    field_selector = 'spec.nodeName='+node_name
+    ret = v1.list_pod_for_all_namespaces(watch=False,\
+            field_selector=field_selector) 
+    pods_to_evict=[]
+    for pod in ret.items:
+        if not pod.metadata.owner_references:
+            logger.info("cannot delete Pods {} which is not managed byReplicationController, ReplicaSet, Job, DaemonSet orStatefulSet".format(pod.metadata.name))
+            sys.exit(1)
+        for owner_reference in pod.metadata.owner_references:
+            if (owner_reference.controller and\
+                owner_reference.kind != "DaemonSet"):
+                logger.info("evicting pod {}/{}".format(pod.metadata.namespace, pod.metadata.name))
+                pods_to_evict.append(pod)
+            elif owner_reference.kind == "DaemonSet":
+                logger.info("ignoring DaemonSet-managed Pods: {}/{}".format(pod.metadata.namespace, pod.metadata.name))
+    while True:
+        for pod in pods_to_evict:
+            time.sleep(2)
+            try:
+                body = client.V1beta1Eviction(metadata=client.V1ObjectMeta(\
+                    name=pod.metadata.name, namespace=pod.metadata.namespace))
+                v1.create_namespaced_pod_eviction(name=pod.metadata.name,\
+                    namespace=pod.metadata.namespace, body=body)
+                logger.info("pod/{} evicted".format(pod.metadata.name))
+            except ApiException as x:
+                if x.status == 429:
+                    logger.info("Failed to evict pod {}:{}".format(pod.metadata.name, loads(x.body)['details']))
+                    continue
+            try:
+                p = v1.read_namespaced_pod(pod.metadata.name,\
+                pod.metadata.namespace)
+                #statefulset fall in this category
+                if p.metadata.uid != pod.metadata.uid:
+                    pods_to_evict.remove(pod)
+                    continue
+            except ApiException as x:
+                #pod is gone, not found
+                if x.status == 404:
+                    pods_to_evict.remove(pod)
+        if not pods_to_evict:
+            logger.info("node/{} drained".format(node_name))
+            break
 
 
 def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):
