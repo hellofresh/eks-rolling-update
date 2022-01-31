@@ -160,7 +160,7 @@ def taint_node(node_name):
         logger.info("Exception when calling CoreV1Api->patch_node: {}".format(e))
 
 
-def drain(node_name):
+def drain_node(node_name):
     """
     Drain pods from the given node
     """
