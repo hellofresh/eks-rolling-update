@@ -194,6 +194,7 @@ def drain_node(node_name):
                     namespace=pod.metadata.namespace, body=body)
                 logger.info("pod/{} evicted".format(pod.metadata.name))
             except ApiException as x:
+                #pdb get 429
                 if x.status == 429:
                     logger.info("Failed to evict pod {}:{}".format(pod.metadata.name, loads(x.body)['details']))
                     continue
