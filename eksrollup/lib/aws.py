@@ -442,7 +442,7 @@ def count_all_cluster_instances(cluster_name, predictive=False, exclude_node_lab
                 try:
                     get_node_by_instance_id(k8s_nodes, instance_id)
                     count += 1
-                except:
+                except Exception:
                     logger.info("Skipping instance {}".format(instance_id))
     logger.info("{} asg instance count in cluster is: {}. K8s node count should match this number".format("*** Predicted" if predictive else "Current", count))
     return count
