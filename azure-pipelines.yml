@@ -37,6 +37,23 @@ stages:
         make docker-dist version=$VERSION
       displayName: "Build docker image"
 
+    - script: |
+        echo " * Performing Sysdig scan ..."
+        docker run --rm \
+          --user root --privileged --userns=host \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -e SYSDIG_ADDED_BY=local-testing \
+          quay.io/sysdig/secure-inline-scan:2.4 \
+            --sysdig-url ${SYSDIG_URL} \
+            --sysdig-token ${SYSDIG_KEY} \
+            --storage-type docker-daemon \
+            --storage-path /var/run/docker.sock \
+            ${IMAGE}
+      env:
+        SYSDIG_URL: $(SYSDIG_URL)
+        SYSDIG_KEY: $(SYSDIG_KEY)
+      displayName: "Run Sysdig scan"
+
     - ${{ if startsWith(variables['build.sourceBranch'], 'refs/tags/v') }}:
       - script: |
           $(awsume-role.sh)

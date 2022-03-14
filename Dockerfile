@@ -1,4 +1,4 @@
-FROM python:3-alpine3.14 as builder
+FROM python:3-alpine3.15 as builder
 ARG VERSION
 RUN apk add --no-cache curl make && \
     curl -LO  https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator && \
@@ -9,7 +9,7 @@ RUN apk add --no-cache curl make && \
 COPY . .
 RUN make dist version=${VERSION}
 
-FROM python:3-alpine3.14
+FROM python:3-alpine3.15
 
 COPY --from=builder /aws-iam-authenticator /kubectl /usr/local/bin/
 COPY --from=builder /dist/*.whl /tmp
