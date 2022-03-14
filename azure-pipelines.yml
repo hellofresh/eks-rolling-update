@@ -15,7 +15,7 @@ variables:
 
 - name: 'imageName'
   type: string
-  default: 'public.ecr.aws/mx51io/eks-rolling-update'
+  default: 'public.ecr.aws/mx51io/eks-rolling-update-fork'
 
 
 stages:
