@@ -9,6 +9,7 @@ trigger:
 variables:
   - group: global-variables
 
+parameters:
 - name: 'awsRegion'
   type: string
   default: 'ap-southeast-2'
