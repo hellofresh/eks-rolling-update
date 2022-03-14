@@ -1,0 +1,15 @@
+# When a pull request is opened, updated or merged, run the tag action.
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened, closed, edited ]
+    branches:
+      - master
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    name: tag
+    steps:
+    - uses: mx51/merge-tag-action@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}

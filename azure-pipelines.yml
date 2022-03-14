@@ -1,0 +1,72 @@
+pr: none
+
+trigger:
+  branches:
+    include: ['*']
+  tags:
+    include: ['v*.*.*']
+
+variables:
+  - group: global-variables
+
+parameters:
+- name: 'awsRegion'
+  type: string
+  default: 'ap-southeast-2'
+
+- name: 'imageName'
+  type: string
+  default: 'public.ecr.aws/mx51io/eks-rolling-update-fork'
+
+
+stages:
+
+# Build and Release stage
+- stage: build_and_release
+  jobs:
+  - job: Build
+    pool: shared
+    steps:
+
+    - script: make setup && . venv/bin/activate
+      displayName: "Create venv and install packages"
+
+    - script: |
+        VERSION=$( ./determine-version.sh )
+        echo make docker-dist version=$VERSION
+        make docker-dist version=$VERSION
+      displayName: "Build docker image"
+
+    - script: |
+        VERSION=$( ./determine-version.sh )
+        echo " * Performing Sysdig scan ..."
+        docker run --rm \
+          --user root --privileged --userns=host \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -e SYSDIG_ADDED_BY=local-testing \
+          quay.io/sysdig/secure-inline-scan:2.4 \
+            --sysdig-url ${SYSDIG_URL} \
+            --sysdig-token ${SYSDIG_KEY} \
+            --storage-type docker-daemon \
+            --storage-path /var/run/docker.sock \
+              ${{ parameters.imageName }}:$VERSION
+      env:
+        SYSDIG_URL: $(SYSDIG_URL)
+        SYSDIG_KEY: $(SYSDIG_KEY)
+      displayName: "Run Sysdig scan"
+
+    - ${{ if startsWith(variables['build.sourceBranch'], 'refs/tags/v') }}:
+      - script: |
+          $(awsume-role.sh)
+          $(aws ecr get-login --region ${{ parameters.awsRegion }} --no-include-email)
+        env:
+          AWS_ROLE_ARN: $(ASSUMED_ROLE)
+          EXPORT: true
+        displayName: "ECR login"
+
+      - script: |
+          VERSION=$( ./determine-version.sh )
+          echo docker push ${{ parameters.imageName }}:$VERSION
+          docker push ${{ parameters.imageName }}:$VERSION
+          docker push ${{ parameters.imageName }}:latest
+        displayName: "Release docker image"
