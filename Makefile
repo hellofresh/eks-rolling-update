@@ -4,6 +4,7 @@
 ### --------------------------------------------------------------------------------------------------------------------
 
 VENV ?= venv
+IMAGE_NAME ?= "public.ecr.aws/mx51io/eks-rolling-update-fork"
 
 # Other config
 NO_COLOR=\033[0m
@@ -65,8 +66,8 @@ dist-upload: dist
 
 docker-dist: check_version
 	docker build . --build-arg VERSION=$(version) \
-		-t eks-rolling-update:$(version) \
-		-t eks-rolling-update:latest
+		-t $(IMAGE_NAME):$(version) \
+		-t $(IMAGE_NAME):latest
 
 check_version:
 ifndef version
