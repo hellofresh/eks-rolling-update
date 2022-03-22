@@ -112,8 +112,7 @@ def scale_up_asg(cluster_name, asg, count):
         old_desired_capacity = asg_old_desired_capacity
 
         while True:
-            asg_instance_count = count_all_cluster_instances(cluster_name, predictive=predictive)
-            if asg_instance_count != desired_capacity and batch_size:
+            if batch_size:
                 if current_capacity is None:
                     current_capacity = old_desired_capacity
                 else:
@@ -123,7 +122,6 @@ def scale_up_asg(cluster_name, asg, count):
                     current_capacity = desired_capacity
             else:
                 current_capacity = desired_capacity
-            
             # only change the max size if the new capacity is bigger than current max
             if current_capacity > asg_old_max_size:
                 scale_asg(asg_name, old_desired_capacity, current_capacity, current_capacity)
@@ -269,10 +267,10 @@ def main(args=None):
     filtered_asgs = get_asgs(args.cluster_name)
     run_mode = app_config['RUN_MODE']
     # perform a dry run on mode 4 for older nodes
-    if args.plan and (run_mode == 4):
+    if (args.plan or app_config['DRY_RUN']) and (run_mode == 4):
         plan_asgs_older_nodes(filtered_asgs)
     # perform a dry run on main mode
-    elif args.plan:
+    elif args.plan or app_config['DRY_RUN']:
         plan_asgs(filtered_asgs)
     else:
         # perform real update

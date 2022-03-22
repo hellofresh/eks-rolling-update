@@ -9,16 +9,24 @@ from eksrollup.config import app_config
 
 
 def ensure_config_loaded():
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
+
+    kube_config = os.getenv('KUBECONFIG')
+    if kube_config and os.path.isfile(kube_config):
         try:
-            config.load_kube_config()
+            config.load_kube_config(context=app_config['K8S_CONTEXT'])
         except config.ConfigException:
             raise Exception("Could not configure kubernetes python client")
+    else:
+        try:
+            config.load_incluster_config()
+        except config.ConfigException:
+            try:
+                config.load_kube_config(context=app_config['K8S_CONTEXT'])
+            except config.ConfigException:
+                raise Exception("Could not configure kubernetes python client")
 
     proxy_url = os.getenv('HTTPS_PROXY', os.getenv('HTTP_PROXY', None))
-    if proxy_url:
+    if proxy_url and not app_config['K8S_PROXY_BYPASS']:
         logger.info(f"Setting proxy: {proxy_url}")
         client.Configuration._default.proxy = proxy_url
 
@@ -171,9 +179,19 @@ def drain_node(node_name):
     logger.info('Draining worker node with {}...'.format(' '.join(kubectl_args)))
     result = subprocess.run(kubectl_args)
 
-    # If returncode is non-zero, raise a CalledProcessError.
+    # If returncode is non-zero run enforced draining of the node or raise a CalledProcessError.
     if result.returncode != 0:
-        raise Exception("Node not drained properly. Exiting")
+        if app_config['ENFORCED_DRAINING'] is True:
+            kubectl_args += [
+                '--disable-eviction=true',
+                '--force=true'
+            ]
+            logger.info('There was an error draining the worker node, proceed with enforced draining ({})...'.format(' '.join(kubectl_args)))
+            enforced_result = subprocess.run(kubectl_args)
+            if enforced_result.returncode != 0:
+                raise Exception("Node not drained properly with enforced draining enabled. Exiting")
+        else:
+            raise Exception("Node not drained properly. Exiting")
 
 
 def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['GLOBAL_HEALTH_WAIT']):

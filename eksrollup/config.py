@@ -13,10 +13,11 @@ app_config = {
     'K8S_AUTOSCALER_NAMESPACE': os.getenv('K8S_AUTOSCALER_NAMESPACE', 'default'),
     'K8S_AUTOSCALER_DEPLOYMENT': os.getenv('K8S_AUTOSCALER_DEPLOYMENT', 'cluster-autoscaler'),
     'K8S_AUTOSCALER_REPLICAS': int(os.getenv('K8S_AUTOSCALER_REPLICAS', 2)),
+    'K8S_CONTEXT': os.getenv('K8S_CONTEXT', None),
+    'K8S_PROXY_BYPASS': str_to_bool(os.getenv('K8S_PROXY_BYPASS', False)),
     'ASG_DESIRED_STATE_TAG': os.getenv('ASG_DESIRED_STATE_TAG', 'eks-rolling-update:desired_capacity'),
     'ASG_ORIG_CAPACITY_TAG': os.getenv('ASG_ORIG_CAPACITY_TAG', 'eks-rolling-update:original_capacity'),
     'ASG_ORIG_MAX_CAPACITY_TAG': os.getenv('ASG_ORIG_MAX_CAPACITY_TAG', 'eks-rolling-update:original_max_capacity'),
-    'ASG_WAIT_FOR_DETACHMENT': str_to_bool(os.getenv('ASG_WAIT_FOR_DETACHMENT', True)),
     'ASG_USE_TERMINATION_POLICY': str_to_bool(os.getenv('ASG_USE_TERMINATION_POLICY', False)),
     'INSTANCE_WAIT_FOR_STOPPING': str_to_bool(os.getenv('INSTANCE_WAIT_FOR_STOPPING', False)),
     'CLUSTER_HEALTH_WAIT': int(os.getenv('CLUSTER_HEALTH_WAIT', 90)),
@@ -31,5 +32,6 @@ app_config = {
     'MAX_ALLOWABLE_NODE_AGE': int(os.getenv('MAX_ALLOWABLE_NODE_AGE', 6)),
     'TAINT_NODES': str_to_bool(os.getenv('TAINT_NODES', False)),
     'BATCH_SIZE': int(os.getenv('BATCH_SIZE', 0)),
+    'ENFORCED_DRAINING': str_to_bool(os.getenv('ENFORCED_DRAINING', False)),
     'ASG_NAMES': os.getenv('ASG_NAMES', '').split()
 }

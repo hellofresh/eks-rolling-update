@@ -1,3 +1,4 @@
 boto3~=1.9.246
 kubernetes~=10.0.1
 python-dotenv~=0.10.2
+urllib3<1.26
