@@ -164,7 +164,7 @@ def update_asgs(asgs, cluster_name):
                 f'Setting the scale of ASG {asg_name} based on {outdated_instance_count} outdated instances.')
             asg_state_dict[asg_name] = scale_up_asg(cluster_name, asg, outdated_instance_count)
 
-    k8s_nodes = get_k8s_nodes()
+    k8s_nodes, k8s_excluded_nodes = get_k8s_nodes()
     if (run_mode == 2) or (run_mode == 3):
         for asg_name, asg_tuple in asg_outdated_instance_dict.items():
             outdated_instances, asg = asg_tuple
@@ -203,8 +203,12 @@ def update_asgs(asgs, cluster_name):
                     else:
                         taint_node(node_name)
                 except Exception as exception:
-                    logger.error(f"Encountered an error when adding taint/cordoning node {node_name}")
-                    logger.error(exception)
+                    try: 
+                        node_name = get_node_by_instance_id(k8s_excluded_nodes, outdated['InstanceId'])
+                        logger.info("Instance {instance_id} / node {node_name} was excluded")
+                    except:
+                        logger.error("Encountered an error when adding taint/cordoning node {node_name}")
+                        logger.error(exception)
                     exit(1)
 
         if len(outdated_instances) != 0:
