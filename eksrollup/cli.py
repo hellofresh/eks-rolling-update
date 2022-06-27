@@ -203,13 +203,14 @@ def update_asgs(asgs, cluster_name):
                     else:
                         taint_node(node_name)
                 except Exception as exception:
-                    try: 
+                    try:
                         node_name = get_node_by_instance_id(k8s_excluded_nodes, outdated['InstanceId'])
-                        logger.info("Instance {instance_id} / node {node_name} was excluded")
-                    except:
-                        logger.error("Encountered an error when adding taint/cordoning node {node_name}")
+                        logger.info(f"Node {node_name} was excluded")
+                        continue
+                    except Exception as exception:
+                        logger.error(f"Encountered an error when adding taint/cordoning node {node_name}")
                         logger.error(exception)
-                    exit(1)
+                        exit(1)
 
         if len(outdated_instances) != 0:
             # if ASG termination is ignored then suspend 'Launch' and 'ReplaceUnhealthy'
@@ -239,8 +240,12 @@ def update_asgs(asgs, cluster_name):
                         logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
                         time.sleep(between_nodes_wait)
             except Exception as drain_exception:
-                logger.info(drain_exception)
-                raise RollingUpdateException("Rolling update on ASG failed", asg_name)
+                try:
+                    node_name = get_node_by_instance_id(k8s_excluded_nodes, outdated['InstanceId'])
+                    logger.info(f"Node {node_name} was excluded")
+                    continue
+                except:
+                    raise RollingUpdateException("Rolling update on ASG failed", asg_name)
 
         # scaling cluster back down
         logger.info("Scaling asg back down to original state")

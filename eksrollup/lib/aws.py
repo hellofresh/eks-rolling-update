@@ -427,8 +427,7 @@ def count_all_cluster_instances(cluster_name, predictive=False, exclude_node_lab
     """
 
     # Get the K8s nodes on the cluster, while excluding nodes with certain label keys
-    k8s_nodes = get_k8s_nodes(exclude_node_label_keys)
-
+    k8s_nodes, excluded_k8s_nodes = get_k8s_nodes(exclude_node_label_keys)
     count = 0
     asgs = get_all_asgs(cluster_name)
     for asg in asgs:
