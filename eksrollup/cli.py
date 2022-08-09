@@ -52,10 +52,9 @@ def validate_cluster_health(asg_name, new_desired_asg_capacity, cluster_name, pr
     logger.info(f'Exiting since ASG healthcheck failed after {cluster_health_retry} attempts')
     raise Exception('ASG healthcheck failed')
 
-
 def scale_up_asg(cluster_name, asg, count):
     asg_old_max_size = asg['MaxSize']
-    asg_old_desired_capacity = asg['DesiredCapacity']
+    asg_old_desired_capacity = asg['DesiredCapacity'] + app_config['ASG_OVERSCALE_INSTANCES']
     desired_capacity = asg_old_desired_capacity + count + app_config['ASG_OVERSCALE_INSTANCES']
     asg_tags = asg['Tags']
     asg_name = asg['AutoScalingGroupName']
