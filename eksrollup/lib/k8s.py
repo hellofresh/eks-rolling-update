@@ -169,7 +169,7 @@ def drain_node(node_name):
     kubectl_args = [
         'kubectl', 'drain', node_name,
         '--ignore-daemonsets',
-        '--delete-local-data'
+        '--delete-emptydir-data'
     ]
     kubectl_args += app_config['EXTRA_DRAIN_ARGS']
 
