@@ -143,7 +143,7 @@ def scale_up_asg(cluster_name, asg, count):
     return desired_capacity, asg_old_desired_capacity, asg_old_max_size
 
 
-def update_asgs(asgs, cluster_name):
+def update_asgs(asgs, cluster_name, worker_type):
     run_mode = app_config['RUN_MODE']
     use_asg_termination_policy = app_config['ASG_USE_TERMINATION_POLICY']
 
@@ -151,7 +151,7 @@ def update_asgs(asgs, cluster_name):
         asg_outdated_instance_dict = plan_asgs_older_nodes(asgs)
 
     else:
-        asg_outdated_instance_dict = plan_asgs(asgs)
+        asg_outdated_instance_dict = plan_asgs(asgs, worker_type)
 
     asg_state_dict = {}
 
@@ -259,6 +259,7 @@ def main(args=None):
                         help='the cluster name to perform rolling update on')
     parser.add_argument('--plan', '-p', action='store_const', const=True,
                         help='perform a dry run to see which instances are out of date')
+    parser.add_argument('--worker_type', '-w', help='worker type. e.g. inf1, inf2, etc.')
     args = parser.parse_args(args)
     # check kubectl is installed
     kctl = shutil.which('kubectl')
@@ -266,20 +267,21 @@ def main(args=None):
         logger.info('kubectl is required to be installed before proceeding')
         quit(1)
     filtered_asgs = get_asgs(args.cluster_name)
+
     run_mode = app_config['RUN_MODE']
     # perform a dry run on mode 4 for older nodes
     if (args.plan or app_config['DRY_RUN']) and (run_mode == 4):
         plan_asgs_older_nodes(filtered_asgs)
     # perform a dry run on main mode
     elif args.plan or app_config['DRY_RUN']:
-        plan_asgs(filtered_asgs)
+        plan_asgs(filtered_asgs, args.worker_type)
     else:
         # perform real update
         if app_config['K8S_AUTOSCALER_ENABLED']:
             # pause k8s autoscaler
             modify_k8s_autoscaler("pause")
         try:
-            update_asgs(filtered_asgs, args.cluster_name)
+            update_asgs(filtered_asgs, args.cluster_name, args.worker_type)
             if app_config['K8S_AUTOSCALER_ENABLED']:
                 # resume autoscaler after asg updated
                 modify_k8s_autoscaler("resume")

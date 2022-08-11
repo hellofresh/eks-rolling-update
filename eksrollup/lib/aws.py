@@ -1,3 +1,4 @@
+import re
 import boto3
 import time
 import datetime
@@ -241,7 +242,7 @@ def instance_outdated_launchconfiguration(instance_obj, asg_lc_name):
         return False
 
 
-def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
+def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version, worker_type=None):
     """
     Checks that the launch template on an instance matches a given string and version. This is often configured in the
     auto scaling group as $Latest or $Default which we can resolve to an actual version number through the
@@ -254,6 +255,12 @@ def instance_outdated_launchtemplate(instance_obj, asg_lt_name, asg_lt_version):
     except KeyError:
         logger.info("Instance id {} missing launch template does not match asg launch template of '{}'".format(instance_id, asg_lt_name))
         return True
+
+    if worker_type is not None:
+        m = re.search("worker-group-([^-]+)-", lt_name)
+        if m and m.group(1) == worker_type:
+            logger.info(f"{worker_type} matched: {lt_name}")
+            return True
 
     if lt_name != asg_lt_name:
         logger.info("Instance id {} launch template of '{}' does not match asg launch template of '{}'".format(instance_id, lt_name, asg_lt_name))
@@ -338,7 +345,7 @@ def instance_terminated(instance_id, max_retry=app_config['GLOBAL_MAX_RETRY'], w
     return is_instance_terminated
 
 
-def plan_asgs(asgs):
+def plan_asgs(asgs, worker_type=None):
     """
     Checks to see which asgs are out of date
     """
@@ -374,7 +381,7 @@ def plan_asgs(asgs):
                 if instance_outdated_launchconfiguration(instance, asg_lc_name):
                     outdated_instances.append(instance)
             elif launch_type == "LaunchTemplate":
-                if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version):
+                if instance_outdated_launchtemplate(instance, asg_lt_name, asg_lt_version, worker_type):
                     outdated_instances.append(instance)
         logger.info('Found {} outdated instances'.format(
             len(outdated_instances))
