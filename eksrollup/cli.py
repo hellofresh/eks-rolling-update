@@ -74,8 +74,8 @@ def scale_up_asg(cluster_name, asg, count):
     if desired_capacity == asg_old_desired_capacity:
         logger.info(f'Desired and current capacity for {asg_name} are equal. Skipping ASG.')
 
-        if asg_tag_desired_capacity.get('Value'):
-            logger.info('Found capacity tags on ASG from previous run. Leaving alone.')
+        if asg_tag_desired_capacity.get('Value') and asg_tag_orig_capacity.get('Value') and asg_tag_orig_max_capacity.get('Value'):
+            logger.info(f'Found capacity tags on ASG {asg_name} from previous run. Leaving alone.')
             return int(asg_tag_desired_capacity.get('Value')), int(asg_tag_orig_capacity.get(
                 'Value')), int(asg_tag_orig_max_capacity.get('Value'))
         else:
