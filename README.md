@@ -58,7 +58,7 @@ autoscaling:UpdateAutoScalingGroup
 autoscaling:CreateOrUpdateTags
 autoscaling:DeleteTags
 ec2:DescribeLaunchTemplates
-ec2:DescribeInstance
+ec2:DescribeInstances
 ```
 
 <a name="installation"></a>
