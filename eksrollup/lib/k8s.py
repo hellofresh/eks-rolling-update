@@ -50,6 +50,18 @@ def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"])
     return response.items
 
 
+def get_running_batch_worker_pods_on_node(node_name):
+    """
+    Returns a list of running batch worker pods on a given node
+    """
+    v1 = client.CoreV1Api()
+    return v1.list_pod_for_all_namespaces(
+        watch=False,
+        label_selector="app=batch-deploy",
+        field_selector=f"status.phase=Running,spec.nodeName={node_name}"
+    )
+
+
 def get_node_by_instance_id(k8s_nodes, instance_id):
     """
     Returns a K8S node name given an instance id. Expects the output of

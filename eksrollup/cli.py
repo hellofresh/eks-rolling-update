@@ -6,7 +6,7 @@ from .config import app_config
 from .lib.logger import logger
 from .lib.aws import is_asg_scaled, is_asg_healthy, instance_terminated, get_asg_tag, modify_aws_autoscaling, \
     count_all_cluster_instances, save_asg_tags, get_asgs, scale_asg, plan_asgs, terminate_instance_in_asg, delete_asg_tags, plan_asgs_older_nodes
-from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, modify_k8s_autoscaler, get_node_by_instance_id, \
+from .lib.k8s import k8s_nodes_count, k8s_nodes_ready, get_k8s_nodes, get_running_batch_worker_pods_on_node, modify_k8s_autoscaler, get_node_by_instance_id, \
     drain_node, delete_node, cordon_node, taint_node
 from .lib.exceptions import RollingUpdateException
 
@@ -215,28 +215,38 @@ def update_asgs(asgs, cluster_name):
 
         # start draining and terminating
         desired_asg_capacity = asg_state_dict[asg_name][0]
-        for outdated in outdated_instances:
-            # catch any failures so we can resume aws autoscaling
-            try:
-                # get the k8s node name instead of instance id
-                node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
-                desired_asg_capacity -= 1
-                drain_node(node_name)
-                delete_node(node_name)
-                save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
-                # terminate/detach outdated instances only if ASG termination policy is ignored
-                if not use_asg_termination_policy:
-                    terminate_instance_in_asg(outdated['InstanceId'])
-                    if not instance_terminated(outdated['InstanceId']):
-                        raise Exception('Instance is failing to terminate. Cancelling out.')
+        while len(outdated_instances) > 0:
+            for outdated in outdated_instances:
+                # catch any failures so we can resume aws autoscaling
+                try:
+                    # get the k8s node name instead of instance id
+                    node_name = get_node_by_instance_id(k8s_nodes, outdated['InstanceId'])
+                    running_batch_worker_pods = get_running_batch_worker_pods_on_node(node_name)
+                    print(f"\n ====Running Batch Pods on {node_name}====\n{[pod.metadata.name for pod in running_batch_worker_pods]}")
+                    if len(running_batch_worker_pods) > 0:
+                        print(f"Don't drain node: {node_name} yet, there are batch jobs running!")
+                        continue
+                    desired_asg_capacity -= 1
+                    drain_node(node_name)
+                    delete_node(node_name)
+                    save_asg_tags(asg_name, app_config["ASG_DESIRED_STATE_TAG"], desired_asg_capacity)
+                    # terminate/detach outdated instances only if ASG termination policy is ignored
+                    if not use_asg_termination_policy:
+                        terminate_instance_in_asg(outdated['InstanceId'])
+                        if not instance_terminated(outdated['InstanceId']):
+                            raise Exception('Instance is failing to terminate. Cancelling out.')
 
-                    between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
-                    if between_nodes_wait != 0:
-                        logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
-                        time.sleep(between_nodes_wait)
-            except Exception as drain_exception:
-                logger.info(drain_exception)
-                raise RollingUpdateException("Rolling update on ASG failed", asg_name)
+                        between_nodes_wait = app_config['BETWEEN_NODES_WAIT']
+                        if between_nodes_wait != 0:
+                            logger.info(f'Waiting for {between_nodes_wait} seconds before continuing...')
+                            time.sleep(between_nodes_wait)
+                    outdated_instances.remove(outdated)
+
+                except Exception as drain_exception:
+                    logger.info(drain_exception)
+                    raise RollingUpdateException("Rolling update on ASG failed", asg_name)
+            print("Waiting for batch jobs to finish, sleeping for 60 seconds")
+            time.sleep(60)
 
         # scaling cluster back down
         logger.info("Scaling asg back down to original state")
@@ -251,6 +261,14 @@ def update_asgs(asgs, cluster_name):
         delete_asg_tags(asg_name, app_config["ASG_ORIG_MAX_CAPACITY_TAG"])
         logger.info(f'*** Rolling update of asg {asg_name} is complete! ***')
     logger.info('All asgs processed')
+
+
+def wait_for_batch_workload_completion():
+    """
+    Batch job pods are not safe to terminate and relaunch on new nodes due to idempotency concerns, therefore we should
+    cordon batch nodes and wait for all jobs on a node to terminate before draining the node.
+    """
+    pass
 
 
 def main(args=None):
