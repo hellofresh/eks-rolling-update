@@ -33,21 +33,25 @@ def ensure_config_loaded():
 
 def get_k8s_nodes(exclude_node_label_keys=app_config["EXCLUDE_NODE_LABEL_KEYS"]):
     """
-    Returns a list of kubernetes nodes
+    Returns a tuple of kubernetes nodes (nodes, excluded)
     """
     ensure_config_loaded()
 
     k8s_api = client.CoreV1Api()
     logger.info("Getting k8s nodes...")
     response = k8s_api.list_node()
+    nodes = []
+    excluded_nodes = []
     if exclude_node_label_keys is not None:
-        nodes = []
         for node in response.items:
             if all(key not in node.metadata.labels for key in exclude_node_label_keys):
                 nodes.append(node)
-        response.items = nodes
-    logger.info("Current k8s node count is {}".format(len(response.items)))
-    return response.items
+            else:
+                excluded_nodes.append(node)
+    else:
+        nodes=response.items
+    logger.info("Current total k8s node count is %d (included: %d, excluded: %d)", len(nodes)+len(excluded_nodes), len(nodes), len(excluded_nodes))
+    return nodes, excluded_nodes
 
 
 def get_node_by_instance_id(k8s_nodes, instance_id):
@@ -62,8 +66,8 @@ def get_node_by_instance_id(k8s_nodes, instance_id):
             logger.info('InstanceId {} is node {} in kubernetes land'.format(instance_id, k8s_node.metadata.name))
             node_name = k8s_node.metadata.name
     if not node_name:
-        logger.info("Could not find a k8s node name for that instance id. Exiting")
-        raise Exception("Could not find a k8s node name for that instance id. Exiting")
+        logger.info(f"Could not find a k8s node name for instance id {instance_id}")
+        raise Exception(f"Could not find a k8s node name for instance id {instance_id}")
     return node_name
 
 
@@ -205,7 +209,7 @@ def k8s_nodes_ready(max_retry=app_config['GLOBAL_MAX_RETRY'], wait=app_config['G
         # reset healthy nodes after every loop
         healthy_nodes = True
         retry_count += 1
-        nodes = get_k8s_nodes()
+        nodes, excluded_nodes = get_k8s_nodes()
         for node in nodes:
             conditions = node.status.conditions
             for condition in conditions:
@@ -236,9 +240,9 @@ def k8s_nodes_count(desired_node_count, max_retry=app_config['GLOBAL_MAX_RETRY']
     while retry_count < max_retry:
         nodes_online = True
         retry_count += 1
-        nodes = get_k8s_nodes()
+        nodes, excluded_nodes = get_k8s_nodes()
         logger.info('Current k8s node count is {}'.format(len(nodes)))
-        if len(nodes) != desired_node_count:
+        if len(nodes) < desired_node_count:
             nodes_online = False
             logger.info('Waiting for k8s nodes to reach count {}...'.format(desired_node_count))
             time.sleep(wait)
