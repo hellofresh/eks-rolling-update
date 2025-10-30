@@ -13,6 +13,7 @@ class TestAWS(unittest.TestCase):
 
     def setUp(self):
         client = boto3.client('autoscaling')
+        client.create_default_vpc()
         # create asg
         client.create_launch_configuration(
             LaunchConfigurationName='mock-lc-01',
