@@ -12,8 +12,10 @@ from unittest.mock import patch
 class TestAWS(unittest.TestCase):
 
     def setUp(self):
+        ec2 = boto3.client('ec2')
+        ec2.create_default_vpc()
+        
         client = boto3.client('autoscaling')
-        client.create_default_vpc()
         # create asg
         client.create_launch_configuration(
             LaunchConfigurationName='mock-lc-01',
