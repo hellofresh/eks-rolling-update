@@ -135,12 +135,12 @@ eks_rolling_update.py -c my-eks-cluster
 | K8S_AUTOSCALER_ENABLED     | If True Kubernetes Autoscaler will be paused before running update                                                         | False                                    |
 | K8S_AUTOSCALER_NAMESPACE   | Namespace where Kubernetes Autoscaler is deployed                                                                          | default                                  |
 | K8S_AUTOSCALER_DEPLOYMENT  | Deployment name of Kubernetes Autoscaler                                                                                   | cluster-autoscaler                       |
-| K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernentes Autoscaler paused                                                 | 2                                        |
+| K8S_AUTOSCALER_REPLICAS    | Number of replicas to scale back up to after Kubernetes Autoscaler paused                                                 | 2                                        |
 | K8S_CONTEXT                | Context from the Kubernetes config to use. If this is left undefined the `current-context` is used                         | None                                     |
 | K8S_PROXY_BYPASS           | Set to `true` to ignore `HTTPS_PROXY` and `HTTP_PROXY` and disable use of any configured proxy when talking to the K8S API | False                                    |
 | TAINT_NODES                | Replace the default **cordon**-before-drain strategy with `NoSchedule` **taint**ing, as a workaround for K8S < `1.19` [prematurely removing cordoned nodes](https://github.com/kubernetes/kubernetes/issues/65013) from `Service`-managed `LoadBalancer`s | False |
 | EXTRA_DRAIN_ARGS           | Additional space-delimited args to supply to the `kubectl drain` function, e.g `--force=true`. See `kubectl drain -h`      | ""                                       |
-| ENFORCED_DRAINING          | If draining fails for a node due to corrupted `PodDisruptionBudget`s or failing pods, retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in productive environments** since this will bypass checking `PodDisruptionBudget`s | False |
+| ENFORCED_DRAINING          | If draining fails for a node due to corrupted `PodDisruptionBudget`s or failing pods, retry draining with `--disable-eviction=true` and `--force=true` for this node to prevent aborting the script. This is useful to get the rolling update done in development and testing environments and **should not be used in production environments** since this will bypass checking `PodDisruptionBudget`s | False |
 
 ## Run Modes
 
