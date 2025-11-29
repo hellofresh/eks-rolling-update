@@ -123,7 +123,7 @@ def scale_up_asg(cluster_name, asg, count):
             else:
                 current_capacity = desired_capacity
 
-            # only change the max size if the new capacity is bigger than current max
+            # only change the max size if the new capacity is larger than current max
             if current_capacity > asg_old_max_size:
                 scale_asg(asg_name, old_desired_capacity, current_capacity, current_capacity)
             else:
